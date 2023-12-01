@@ -2,6 +2,7 @@
 #include <tileson.h>
 #include <spdlog/spdlog.h>
 #include <spdlog/sinks/stdout_color_sinks.h>
+#include <glm/ext/scalar_constants.hpp>
 
 std::shared_ptr<spdlog::sinks::sink> consoleSink;
 std::shared_ptr<spdlog::logger> raylibLog;
@@ -10,6 +11,12 @@ std::shared_ptr<spdlog::logger> logicLog;
 struct Settings {
 	float diskDelay = 1.0f;
 	float gravity = 9.81;
+	float rifleSpeed = 1.0f;
+	float diskSize = 0.40f;
+	float explosionLifetime = 2.0f;
+	float rifleLength = 1.5f;
+	bool debugDrawDiskColliders = false;
+	bool pausePhysics = false;
 };
 
 struct Content {
@@ -40,6 +47,69 @@ public:
 	}
 
 	void update() {
+
+		bool shot = false;
+
+		{
+			if (IsKeyDown(KEY_DOWN) || IsKeyDown(KEY_RIGHT)) {
+				rifle_angle -= settings.rifleSpeed * GetFrameTime();
+			}
+			if (IsKeyDown(KEY_UP) || IsKeyDown(KEY_LEFT)) {
+				rifle_angle += settings.rifleSpeed * GetFrameTime();
+			}
+			rifle_angle = std::clamp<float>(rifle_angle, 0, glm::pi<float>() / 2);
+
+			if (IsKeyPressed(KEY_SPACE)) {
+				shot = true;
+			}
+		}
+
+		{
+			const glm::vec2 rifle_start(0.5f, 13.5f);
+			const glm::vec2 rifle_end = rifle_start + glm::vec2(std::cos(rifle_angle), -std::sin(rifle_angle)) * 20.0f;
+
+			for (auto iter = disks.begin(); iter != disks.end();) {
+				if (!settings.pausePhysics) {
+					iter->position += iter->velocity * GetFrameTime();
+					iter->velocity += glm::vec2(0, settings.gravity) * GetFrameTime();
+				}
+
+				bool destroyed = false;
+
+				if (shot && collideLineCircle(iter->position, settings.diskSize, rifle_start, rifle_end)) {
+					logicLog->info("Disk hit!");
+
+					Explosion explosion;
+					explosion.position = iter->position;
+					explosion.timeCreated = GetTime();
+					explosions.push_back(explosion);
+
+					destroyed = true;
+				}
+
+				if (iter->position.y > 16) {
+					destroyed = true;
+				}
+
+				if (destroyed) {
+					iter = disks.erase(iter);
+					lastDiskTime = GetTime();
+				}
+				else {
+					++iter;
+				}
+			}
+		}
+
+		for (auto iter = explosions.begin(); iter != explosions.end();) {
+			if (GetTime() - iter->timeCreated > settings.explosionLifetime) {
+				iter = explosions.erase(iter);
+			}
+			else {
+				++iter;
+			}
+		}
+
 		if (disks.empty() && GetTime() - lastDiskTime >= settings.diskDelay) {
 			Disk disk;
 			disk.velocity.x = randomFloat(-3, 3);
@@ -53,18 +123,6 @@ public:
 
 			logicLog->debug("Spawned disk: velocity.x = {}, velocity.y = {}, time_in_air = {}, traveled_distance = {}, position.x = {}, position.y = {}", disk.velocity.x, disk.velocity.y, time_in_air, traveled_distance, disk.position.x, disk.position.y);
 			disks.push_back(disk);
-		}
-
-		for (auto iter = disks.begin(); iter != disks.end();) {
-			iter->position += iter->velocity * GetFrameTime();
-			iter->velocity += glm::vec2(0, settings.gravity) * GetFrameTime();
-			if (iter->position.y > 16) {
-				iter = disks.erase(iter);
-				lastDiskTime = GetTime();
-			}
-			else {
-				++iter;
-			}
 		}
 	}
 
@@ -81,6 +139,7 @@ public:
 		const tson::Tile* treebottom_tile = tiles.at(Tile_TreeBottom + 1);
 		const tson::Tile* treetop_tile = tiles.at(Tile_TreeTop + 1);
 		const tson::Tile* disk_tile = tiles.at(Tile_Disk + 1);
+		const tson::Tile* explosion_tile = tiles.at(Tile_Explosion + 1);
 
 		auto draw_tile = [&content = content](const tson::Tile* tile, const glm::vec2 position) {
 			Rectangle draw_rect;
@@ -101,7 +160,19 @@ public:
 			draw_tile(treetop_tile, glm::vec2(i, 14));
 		}
 		for (const Disk& disk : disks) {
-			draw_tile(disk_tile, disk.position);
+			draw_tile(disk_tile, disk.position - glm::vec2(0.5f));
+			if (settings.debugDrawDiskColliders) {
+				DrawCircleV(Vector2{ disk.position.x, disk.position.y }, settings.diskSize, Color{ 255,0,0,192 });
+			}
+		}
+		for (const Explosion& explosion : explosions) {
+			draw_tile(explosion_tile, explosion.position - glm::vec2(0.5f));
+		}
+
+		{
+			const glm::vec2 rifle_start(0.5f, 13.5f);
+			const glm::vec2 rifle_end = rifle_start + glm::vec2(std::cos(rifle_angle), -std::sin(rifle_angle)) * settings.rifleLength;
+			DrawLineEx(Vector2{ rifle_start.x, rifle_start.y }, Vector2{ rifle_end.x, rifle_end.y }, 0.1f, YELLOW);
 		}
 		EndMode2D();
 	}
@@ -114,6 +185,7 @@ private:
 		Tile_TreeBottom = 31,
 		Tile_TreeTop = 23,
 		Tile_Disk = 20,
+		Tile_Explosion = 35,
 	};
 
 	struct Disk
@@ -122,12 +194,30 @@ private:
 		glm::vec2 velocity;
 	};
 
+	struct Explosion
+	{
+		glm::vec2 position;
+		double timeCreated;
+	};
+
 	const Settings& settings;
 	Content& content;
 	Camera2D camera;
 
 	std::list<Disk> disks;
+	std::list<Explosion> explosions;
 	double lastDiskTime = 0;
+	float rifle_angle = 0;
+
+	static bool collideLineCircle(const glm::vec2& circle_center, const float circle_radius, const glm::vec2& line_start, const glm::vec2& line_end) {
+		const float hyp = glm::length(circle_center - line_start);
+		const float cath = glm::dot(circle_center - line_start, line_end - line_start) / glm::length(line_end - line_start);
+
+		const float dist = std::sqrt(hyp * hyp - cath * cath);
+		logicLog->debug("Hit dist: {}", dist);
+
+		return hyp * hyp - cath * cath < circle_radius * circle_radius;
+	}
 };
 
 static void traceLogCallback(int logLevel, const char* text, va_list args) {
@@ -171,6 +261,7 @@ int main() {
 	logicLog.reset(new spdlog::logger("logic", consoleSink));
 	logicLog->set_level(spdlog::level::debug);
 
+	SetConfigFlags(FLAG_WINDOW_RESIZABLE);
 	SetTraceLogCallback(&traceLogCallback);
 	InitWindow(720, 720, "Diskiller");
 
@@ -179,6 +270,11 @@ int main() {
 	Session session(settings, content);
 
 	while (!WindowShouldClose()) {
+
+		if (IsKeyPressed(KEY_PAUSE)) {
+			settings.pausePhysics = !settings.pausePhysics;
+		}
+
 		BeginDrawing();
 
 		session.update();
