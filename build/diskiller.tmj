@@ -1,0 +1,166 @@
+{ "backgroundcolor":"#29ceff",
+ "compressionlevel":-1,
+ "height":16,
+ "infinite":false,
+ "layers":[
+        {
+         "draworder":"topdown",
+         "id":2,
+         "name":"Object Layer 1",
+         "objects":[
+                {
+                 "height":128,
+                 "id":1,
+                 "name":"",
+                 "rotation":0,
+                 "text":
+                    {
+                     "fontfamily":"Courier New",
+                     "halign":"center",
+                     "pixelsize":96,
+                     "text":"Diskiller",
+                     "valign":"center",
+                     "wrap":true
+                    },
+                 "type":"",
+                 "visible":true,
+                 "width":640,
+                 "x":192,
+                 "y":256
+                }, 
+                {
+                 "height":64,
+                 "id":2,
+                 "name":"",
+                 "rotation":0,
+                 "text":
+                    {
+                     "fontfamily":"Courier New",
+                     "pixelsize":48,
+                     "text":"Play",
+                     "wrap":true
+                    },
+                 "type":"",
+                 "visible":true,
+                 "width":448,
+                 "x":320,
+                 "y":512
+                }, 
+                {
+                 "height":64,
+                 "id":5,
+                 "name":"",
+                 "rotation":0,
+                 "text":
+                    {
+                     "fontfamily":"Courier New",
+                     "pixelsize":48,
+                     "text":"Mode: XXXXXXXX",
+                     "wrap":true
+                    },
+                 "type":"",
+                 "visible":true,
+                 "width":448,
+                 "x":320,
+                 "y":576
+                }, 
+                {
+                 "height":64,
+                 "id":6,
+                 "name":"",
+                 "rotation":0,
+                 "text":
+                    {
+                     "fontfamily":"Courier New",
+                     "pixelsize":48,
+                     "text":"Exit",
+                     "wrap":true
+                    },
+                 "type":"",
+                 "visible":true,
+                 "width":448,
+                 "x":320,
+                 "y":704
+                }, 
+                {
+                 "height":64,
+                 "id":7,
+                 "name":"",
+                 "rotation":0,
+                 "text":
+                    {
+                     "fontfamily":"Courier New",
+                     "pixelsize":48,
+                     "text":">",
+                     "wrap":true
+                    },
+                 "type":"",
+                 "visible":true,
+                 "width":64,
+                 "x":256,
+                 "y":512
+                }, 
+                {
+                 "height":64,
+                 "id":8,
+                 "name":"",
+                 "rotation":0,
+                 "text":
+                    {
+                     "fontfamily":"Courier New",
+                     "pixelsize":48,
+                     "text":"Credits",
+                     "wrap":true
+                    },
+                 "type":"",
+                 "visible":true,
+                 "width":448,
+                 "x":320,
+                 "y":640
+                }],
+         "opacity":1,
+         "type":"objectgroup",
+         "visible":true,
+         "x":0,
+         "y":0
+        }, 
+        {
+         "compression":"zstd",
+         "data":"KLUv\/WAAA9UAAEgAHwACAAAAGCAFANhFhmAB7CQ9ICFPKscG",
+         "encoding":"base64",
+         "height":16,
+         "id":1,
+         "name":"Tile Layer 1",
+         "opacity":1,
+         "type":"tilelayer",
+         "visible":true,
+         "width":16,
+         "x":0,
+         "y":0
+        }],
+ "nextlayerid":3,
+ "nextobjectid":9,
+ "orientation":"orthogonal",
+ "renderorder":"right-down",
+ "tiledversion":"1.10.1",
+ "tileheight":64,
+ "tilesets":[
+  {
+    "columns": 8,
+    "firstgid": 1,
+    "image": "diskiller.png",
+    "imageheight": 96,
+    "imagewidth": 128,
+    "margin": 0,
+    "name": "diskiller",
+    "spacing": 0,
+    "tilecount": 48,
+    "tileheight": 16,
+    "tilerendersize": "grid",
+    "tilewidth": 16
+  }],
+ "tilewidth":64,
+ "type":"map",
+ "version":"1.10",
+ "width":16
+}
