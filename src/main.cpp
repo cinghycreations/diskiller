@@ -22,16 +22,20 @@ struct Settings {
 struct Content {
 	Texture2D sprites;
 	std::unique_ptr<tson::Map> map;
+	Font font;
 
 	Content() {
 		sprites = LoadTexture("diskiller.png");
 
 		tson::Tileson parser(std::unique_ptr<tson::IJson>(new tson::NlohmannJson));
 		map = parser.parse("diskiller.tmj");
+
+		font = LoadFontEx("cour.ttf", 96, nullptr, 0);
 	}
 
 	~Content() {
 		UnloadTexture(sprites);
+		UnloadFont(font);
 	}
 };
 
@@ -84,6 +88,7 @@ public:
 					explosion.timeCreated = GetTime();
 					explosions.push_back(explosion);
 
+					hitDisks += 1;
 					destroyed = true;
 				}
 
@@ -123,6 +128,7 @@ public:
 
 			logicLog->debug("Spawned disk: velocity.x = {}, velocity.y = {}, time_in_air = {}, traveled_distance = {}, position.x = {}, position.y = {}", disk.velocity.x, disk.velocity.y, time_in_air, traveled_distance, disk.position.x, disk.position.y);
 			disks.push_back(disk);
+			totalDisks += 1;
 		}
 	}
 
@@ -174,6 +180,12 @@ public:
 			const glm::vec2 rifle_end = rifle_start + glm::vec2(std::cos(rifle_angle), -std::sin(rifle_angle)) * settings.rifleLength;
 			DrawLineEx(Vector2{ rifle_start.x, rifle_start.y }, Vector2{ rifle_end.x, rifle_end.y }, 0.1f, YELLOW);
 		}
+
+		{
+			const std::string score = fmt::format("Score: {}/{}", hitDisks, totalDisks);
+			DrawTextEx(content.font, score.c_str(), Vector2{ 0, 0 }, 1, 0, BLACK);
+		}
+
 		EndMode2D();
 	}
 
@@ -208,6 +220,8 @@ private:
 	std::list<Explosion> explosions;
 	double lastDiskTime = 0;
 	float rifle_angle = 0;
+	int totalDisks = 0;
+	int hitDisks = 0;
 
 	static bool collideLineCircle(const glm::vec2& circle_center, const float circle_radius, const glm::vec2& line_start, const glm::vec2& line_end) {
 		const float hyp = glm::length(circle_center - line_start);
