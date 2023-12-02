@@ -8,6 +8,8 @@ std::shared_ptr<spdlog::sinks::sink> consoleSink;
 std::shared_ptr<spdlog::logger> raylibLog;
 std::shared_ptr<spdlog::logger> logicLog;
 
+class SplashScreen;
+
 struct Settings {
 	float diskDelay = 1.0f;
 	float gravity = 9.81;
@@ -50,13 +52,83 @@ public:
 	virtual void render() = 0;
 };
 
+enum class SessionType {
+	BestScore,
+	Survival,
+};
+
+struct SessionDef {
+	SessionType type;
+	int bestScoreMaxDisks;
+};
+
+class UiScreen : public Mode {
+protected:
+	Camera2D camera;
+
+	void setCamera() {
+		const float pixel_per_unit = std::min(float(GetScreenHeight()) / 16.0f, float(GetScreenWidth()) / 16.0f);
+		memset(&camera, 0, sizeof(Camera2D));
+		camera.zoom = pixel_per_unit;
+		camera.offset.x = (GetScreenWidth() - pixel_per_unit * 16) / 2;
+		camera.offset.y = (GetScreenHeight() - pixel_per_unit * 16) / 2;
+	}
+};
+
+class SplashScreen : public UiScreen {
+public:
+	SplashScreen(const Settings& _settings, Content& _content) : settings(_settings), content(_content) {
+	}
+
+	std::optional<Mode*> update() override;
+
+	void render() override {
+		setCamera();
+
+		BeginMode2D(camera);
+		ClearBackground(Color{ content.map->getBackgroundColor().r, content.map->getBackgroundColor().g, content.map->getBackgroundColor().b, content.map->getBackgroundColor().a });
+		DrawTextEx(content.font, "Diskiller", Vector2{ 4,4 }, 2, 0, BLACK);
+		DrawTextEx(content.font, "Play", Vector2{ 5,8 }, 1, 0, BLACK);
+		DrawTextEx(content.font, fmt::format("Mode: {}", sessionModes.at(modeSelection).name).c_str(), Vector2{ 5,9 }, 1, 0, BLACK);
+		DrawTextEx(content.font, "Records", Vector2{ 5,10 }, 1, 0, BLACK);
+		DrawTextEx(content.font, "Credits", Vector2{ 5,11 }, 1, 0, BLACK);
+		DrawTextEx(content.font, "Exit", Vector2{ 5,12 }, 1, 0, BLACK);
+		DrawTextEx(content.font, ">", Vector2{ 4, float(8 + menuSelection) }, 1, 0, BLACK);
+		EndMode2D();
+	}
+
+private:
+
+	struct SessionMode {
+		std::string name;
+		SessionDef sessionDef;
+	};
+
+	const std::array<SessionMode, 5> sessionModes = {
+		SessionMode { "Best of 10", SessionDef { SessionType::BestScore, 10 } },
+		SessionMode { "Best of 25", SessionDef { SessionType::BestScore, 25 } },
+		SessionMode { "Best of 50", SessionDef { SessionType::BestScore, 50 } },
+		SessionMode { "Best of 100", SessionDef { SessionType::BestScore, 100 } },
+		SessionMode { "Survival", SessionDef { SessionType::Survival } },
+	};
+
+	const Settings& settings;
+	Content& content;
+	int menuSelection = 0;
+	int modeSelection = 0;
+};
+
 class Session : public Mode {
 public:
-	Session(const Settings& _settings, Content& _content) : settings(_settings), content(_content) {
+	Session(const Settings& _settings, Content& _content, const SessionDef& session_def) : settings(_settings), content(_content), sessionDef(session_def) {
 		memset(&camera, 0, sizeof(Camera2D));
 	}
 
 	std::optional<Mode*> update() override {
+		if (IsKeyPressed(KEY_BACKSPACE)) {
+			return new SplashScreen(settings, content);
+		}
+
 		bool shot = false;
 
 		{
@@ -98,6 +170,15 @@ public:
 				}
 
 				if (iter->position.y > 16) {
+					if (sessionDef.type == SessionType::Survival) {
+						return new SplashScreen(settings, content);
+					}
+					else if (sessionDef.type == SessionType::BestScore) {
+						if (totalDisks == sessionDef.bestScoreMaxDisks) {
+							return new SplashScreen(settings, content);
+						}
+					}
+
 					destroyed = true;
 				}
 
@@ -189,7 +270,13 @@ public:
 		}
 
 		{
-			const std::string score = fmt::format("Score: {}/{}", hitDisks, totalDisks);
+			std::string score;
+			if (sessionDef.type == SessionType::BestScore) {
+				score = fmt::format("Score {}, Disk {}/{}", hitDisks, totalDisks, sessionDef.bestScoreMaxDisks);
+			}
+			else {
+				score = fmt::format("Score {}", hitDisks);
+			}
 			DrawTextEx(content.font, score.c_str(), Vector2{ 0, 0 }, 1, 0, BLACK);
 		}
 
@@ -221,6 +308,8 @@ private:
 
 	const Settings& settings;
 	Content& content;
+	SessionDef sessionDef;
+
 	Camera2D camera;
 
 	std::list<Disk> disks;
@@ -241,70 +330,35 @@ private:
 	}
 };
 
-class UiScreen : public Mode {
-protected:
-	Camera2D camera;
-
-	void setCamera() {
-		const float pixel_per_unit = std::min(float(GetScreenHeight()) / 16.0f, float(GetScreenWidth()) / 16.0f);
-		memset(&camera, 0, sizeof(Camera2D));
-		camera.zoom = pixel_per_unit;
-		camera.offset.x = (GetScreenWidth() - pixel_per_unit * 16) / 2;
-		camera.offset.y = (GetScreenHeight() - pixel_per_unit * 16) / 2;
-	}
-};
-
-class SplashScreen : public UiScreen {
-public:
-	SplashScreen(const Settings& _settings, Content& _content) : settings(_settings), content(_content) {
+std::optional<Mode*> SplashScreen::update() {
+	if (IsKeyPressed(KEY_DOWN)) {
+		menuSelection = std::clamp(menuSelection + 1, 0, 4);
 	}
 
-	std::optional<Mode*> update() override {
-		if (IsKeyPressed(KEY_DOWN)) {
-			choice = std::clamp(choice + 1, 0, 4);
+	if (IsKeyPressed(KEY_UP)) {
+		menuSelection = std::clamp(menuSelection - 1, 0, 4);
+	}
+
+	if (IsKeyPressed(KEY_ENTER)) {
+		switch (menuSelection)
+		{
+		case 0:
+			return new Session(settings, content, sessionModes.at(modeSelection).sessionDef);
+
+		case 1:
+			modeSelection = (modeSelection + 1) % sessionModes.size();
+			break;
+
+		case 4:
+			exit(0);
+
+		default:
+			break;
 		}
-
-		if (IsKeyPressed(KEY_UP)) {
-			choice = std::clamp(choice - 1, 0, 4);
-		}
-
-		if (IsKeyPressed(KEY_ENTER)) {
-			switch (choice)
-			{
-			case 0:
-				return new Session(settings, content);
-			case 4:
-				exit(0);
-
-			default:
-				break;
-			}
-		}
-
-		return std::nullopt;
 	}
 
-	void render() override {
-		setCamera();
-
-		BeginMode2D(camera);
-		ClearBackground(Color{ content.map->getBackgroundColor().r, content.map->getBackgroundColor().g, content.map->getBackgroundColor().b, content.map->getBackgroundColor().a });
-		DrawTextEx(content.font, "Diskiller", Vector2{ 4,4 }, 2, 0, BLACK);
-		DrawTextEx(content.font, "Play", Vector2{ 5,8 }, 1, 0, BLACK);
-		DrawTextEx(content.font, "Mode", Vector2{ 5,9 }, 1, 0, BLACK);
-		DrawTextEx(content.font, "Records", Vector2{ 5,10 }, 1, 0, BLACK);
-		DrawTextEx(content.font, "Credits", Vector2{ 5,11 }, 1, 0, BLACK);
-		DrawTextEx(content.font, "Exit", Vector2{ 5,12 }, 1, 0, BLACK);
-		DrawTextEx(content.font, ">", Vector2{ 4, float(8 + choice) }, 1, 0, BLACK);
-		EndMode2D();
-	}
-
-private:
-
-	const Settings& settings;
-	Content& content;
-	int choice = 0;
-};
+	return std::nullopt;
+}
 
 static void traceLogCallback(int logLevel, const char* text, va_list args) {
 	static std::array<char, 4096> buffer;
