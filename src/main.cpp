@@ -11,14 +11,13 @@ std::shared_ptr<spdlog::logger> logicLog;
 class SplashScreen;
 
 struct Settings {
-	float diskDelay = 1.0f;
 	float gravity = 9.81;
+	float diskDelay = 1.0f;
+	float diskColliderSize = 0.40f;
+	bool diskColliderDebugDraw = false;
 	float rifleSpeed = 1.0f;
-	float diskSize = 0.40f;
-	float explosionLifetime = 2.0f;
 	float rifleLength = 1.5f;
-	bool debugDrawDiskColliders = false;
-	bool pausePhysics = false;
+	float explosionLifetime = 2.0f;
 };
 
 struct Content {
@@ -45,10 +44,10 @@ static float randomFloat(const float min, const float max) {
 	return float(rand() % RAND_MAX) / RAND_MAX * (max - min) + min;
 }
 
-class Mode {
+class GameScreen {
 public:
 
-	virtual std::optional<Mode*> update() = 0;
+	virtual std::optional<GameScreen*> update() = 0;
 	virtual void render() = 0;
 };
 
@@ -62,7 +61,7 @@ struct SessionDef {
 	int bestScoreMaxDisks;
 };
 
-class UiScreen : public Mode {
+class UiScreen : public GameScreen {
 protected:
 	Camera2D camera;
 
@@ -80,7 +79,7 @@ public:
 	SplashScreen(const Settings& _settings, Content& _content) : settings(_settings), content(_content) {
 	}
 
-	std::optional<Mode*> update() override;
+	std::optional<GameScreen*> update() override;
 
 	void render() override {
 		setCamera();
@@ -89,7 +88,7 @@ public:
 		ClearBackground(Color{ content.map->getBackgroundColor().r, content.map->getBackgroundColor().g, content.map->getBackgroundColor().b, content.map->getBackgroundColor().a });
 		DrawTextEx(content.font, "Diskiller", Vector2{ 4,4 }, 2, 0, BLACK);
 		DrawTextEx(content.font, "Play", Vector2{ 5,8 }, 1, 0, BLACK);
-		DrawTextEx(content.font, fmt::format("Mode: {}", sessionModes.at(modeSelection).name).c_str(), Vector2{ 5,9 }, 1, 0, BLACK);
+		DrawTextEx(content.font, fmt::format("Mode: {}", gameModes.at(modeSelection).name).c_str(), Vector2{ 5,9 }, 1, 0, BLACK);
 		DrawTextEx(content.font, "Records", Vector2{ 5,10 }, 1, 0, BLACK);
 		DrawTextEx(content.font, "Credits", Vector2{ 5,11 }, 1, 0, BLACK);
 		DrawTextEx(content.font, "Exit", Vector2{ 5,12 }, 1, 0, BLACK);
@@ -98,18 +97,17 @@ public:
 	}
 
 private:
-
-	struct SessionMode {
+	struct GameMode {
 		std::string name;
 		SessionDef sessionDef;
 	};
 
-	const std::array<SessionMode, 5> sessionModes = {
-		SessionMode { "Best of 10", SessionDef { SessionType::BestScore, 10 } },
-		SessionMode { "Best of 25", SessionDef { SessionType::BestScore, 25 } },
-		SessionMode { "Best of 50", SessionDef { SessionType::BestScore, 50 } },
-		SessionMode { "Best of 100", SessionDef { SessionType::BestScore, 100 } },
-		SessionMode { "Survival", SessionDef { SessionType::Survival } },
+	const std::array<GameMode, 5> gameModes = {
+		GameMode { "Best of 10", SessionDef { SessionType::BestScore, 10 } },
+		GameMode { "Best of 25", SessionDef { SessionType::BestScore, 25 } },
+		GameMode { "Best of 50", SessionDef { SessionType::BestScore, 50 } },
+		GameMode { "Best of 100", SessionDef { SessionType::BestScore, 100 } },
+		GameMode { "Survival", SessionDef { SessionType::Survival } },
 	};
 
 	const Settings& settings;
@@ -118,13 +116,13 @@ private:
 	int modeSelection = 0;
 };
 
-class Session : public Mode {
+class Session : public GameScreen {
 public:
 	Session(const Settings& _settings, Content& _content, const SessionDef& session_def) : settings(_settings), content(_content), sessionDef(session_def) {
 		memset(&camera, 0, sizeof(Camera2D));
 	}
 
-	std::optional<Mode*> update() override {
+	std::optional<GameScreen*> update() override {
 		if (IsKeyPressed(KEY_BACKSPACE)) {
 			return new SplashScreen(settings, content);
 		}
@@ -150,14 +148,12 @@ public:
 			const glm::vec2 rifle_end = rifle_start + glm::vec2(std::cos(rifle_angle), -std::sin(rifle_angle)) * 20.0f;
 
 			for (auto iter = disks.begin(); iter != disks.end();) {
-				if (!settings.pausePhysics) {
-					iter->position += iter->velocity * GetFrameTime();
-					iter->velocity += glm::vec2(0, settings.gravity) * GetFrameTime();
-				}
+				iter->position += iter->velocity * GetFrameTime();
+				iter->velocity += glm::vec2(0, settings.gravity) * GetFrameTime();
 
 				bool destroyed = false;
 
-				if (shot && collideLineCircle(iter->position, settings.diskSize, rifle_start, rifle_end)) {
+				if (shot && collideLineCircle(iter->position, settings.diskColliderSize, rifle_start, rifle_end)) {
 					logicLog->info("Disk hit!");
 
 					Explosion explosion;
@@ -255,8 +251,8 @@ public:
 		}
 		for (const Disk& disk : disks) {
 			draw_tile(disk_tile, disk.position - glm::vec2(0.5f));
-			if (settings.debugDrawDiskColliders) {
-				DrawCircleV(Vector2{ disk.position.x, disk.position.y }, settings.diskSize, Color{ 255,0,0,192 });
+			if (settings.diskColliderDebugDraw) {
+				DrawCircleV(Vector2{ disk.position.x, disk.position.y }, settings.diskColliderSize, Color{ 255,0,0,192 });
 			}
 		}
 		for (const Explosion& explosion : explosions) {
@@ -284,7 +280,6 @@ public:
 	}
 
 private:
-
 	enum {
 		Tile_Character = 30,
 		Tile_Rock = 1,
@@ -330,7 +325,7 @@ private:
 	}
 };
 
-std::optional<Mode*> SplashScreen::update() {
+std::optional<GameScreen*> SplashScreen::update() {
 	if (IsKeyPressed(KEY_DOWN)) {
 		menuSelection = std::clamp(menuSelection + 1, 0, 4);
 	}
@@ -343,10 +338,10 @@ std::optional<Mode*> SplashScreen::update() {
 		switch (menuSelection)
 		{
 		case 0:
-			return new Session(settings, content, sessionModes.at(modeSelection).sessionDef);
+			return new Session(settings, content, gameModes.at(modeSelection).sessionDef);
 
 		case 1:
-			modeSelection = (modeSelection + 1) % sessionModes.size();
+			modeSelection = (modeSelection + 1) % gameModes.size();
 			break;
 
 		case 4:
@@ -408,24 +403,19 @@ int main() {
 	Settings settings;
 	Content content;
 
-	std::unique_ptr<Mode> mode;
-	mode.reset(new SplashScreen(settings, content));
+	std::unique_ptr<GameScreen> game_screen;
+	game_screen.reset(new SplashScreen(settings, content));
 
 	while (!WindowShouldClose()) {
-
-		if (IsKeyPressed(KEY_PAUSE)) {
-			settings.pausePhysics = !settings.pausePhysics;
-		}
-
-		std::optional<Mode*> new_mode = mode->update();
+		std::optional<GameScreen*> new_screen = game_screen->update();
 
 		BeginDrawing();
-		mode->render();
+		game_screen->render();
 		EndDrawing();
 
-		if (new_mode.has_value()) {
-			mode.reset();
-			mode.reset(*new_mode);
+		if (new_screen.has_value()) {
+			game_screen.reset();
+			game_screen.reset(*new_screen);
 		}
 	}
 
