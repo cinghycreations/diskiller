@@ -43,15 +43,20 @@ static float randomFloat(const float min, const float max) {
 	return float(rand() % RAND_MAX) / RAND_MAX * (max - min) + min;
 }
 
-class Session {
+class Mode {
 public:
 
+	virtual std::optional<Mode*> update() = 0;
+	virtual void render() = 0;
+};
+
+class Session : public Mode {
+public:
 	Session(const Settings& _settings, Content& _content) : settings(_settings), content(_content) {
 		memset(&camera, 0, sizeof(Camera2D));
 	}
 
-	void update() {
-
+	std::optional<Mode*> update() override {
 		bool shot = false;
 
 		{
@@ -130,9 +135,11 @@ public:
 			disks.push_back(disk);
 			totalDisks += 1;
 		}
+
+		return std::nullopt;
 	}
 
-	void render() {
+	void render() override {
 		const float pixel_per_unit = std::min(float(GetScreenHeight()) / 16.0f, float(GetScreenWidth()) / 16.0f);
 		memset(&camera, 0, sizeof(Camera2D));
 		camera.zoom = pixel_per_unit;
@@ -234,6 +241,71 @@ private:
 	}
 };
 
+class UiScreen : public Mode {
+protected:
+	Camera2D camera;
+
+	void setCamera() {
+		const float pixel_per_unit = std::min(float(GetScreenHeight()) / 16.0f, float(GetScreenWidth()) / 16.0f);
+		memset(&camera, 0, sizeof(Camera2D));
+		camera.zoom = pixel_per_unit;
+		camera.offset.x = (GetScreenWidth() - pixel_per_unit * 16) / 2;
+		camera.offset.y = (GetScreenHeight() - pixel_per_unit * 16) / 2;
+	}
+};
+
+class SplashScreen : public UiScreen {
+public:
+	SplashScreen(const Settings& _settings, Content& _content) : settings(_settings), content(_content) {
+	}
+
+	std::optional<Mode*> update() override {
+		if (IsKeyPressed(KEY_DOWN)) {
+			choice = std::clamp(choice + 1, 0, 4);
+		}
+
+		if (IsKeyPressed(KEY_UP)) {
+			choice = std::clamp(choice - 1, 0, 4);
+		}
+
+		if (IsKeyPressed(KEY_ENTER)) {
+			switch (choice)
+			{
+			case 0:
+				return new Session(settings, content);
+			case 4:
+				exit(0);
+
+			default:
+				break;
+			}
+		}
+
+		return std::nullopt;
+	}
+
+	void render() override {
+		setCamera();
+
+		BeginMode2D(camera);
+		ClearBackground(Color{ content.map->getBackgroundColor().r, content.map->getBackgroundColor().g, content.map->getBackgroundColor().b, content.map->getBackgroundColor().a });
+		DrawTextEx(content.font, "Diskiller", Vector2{ 4,4 }, 2, 0, BLACK);
+		DrawTextEx(content.font, "Play", Vector2{ 5,8 }, 1, 0, BLACK);
+		DrawTextEx(content.font, "Mode", Vector2{ 5,9 }, 1, 0, BLACK);
+		DrawTextEx(content.font, "Records", Vector2{ 5,10 }, 1, 0, BLACK);
+		DrawTextEx(content.font, "Credits", Vector2{ 5,11 }, 1, 0, BLACK);
+		DrawTextEx(content.font, "Exit", Vector2{ 5,12 }, 1, 0, BLACK);
+		DrawTextEx(content.font, ">", Vector2{ 4, float(8 + choice) }, 1, 0, BLACK);
+		EndMode2D();
+	}
+
+private:
+
+	const Settings& settings;
+	Content& content;
+	int choice = 0;
+};
+
 static void traceLogCallback(int logLevel, const char* text, va_list args) {
 	static std::array<char, 4096> buffer;
 	vsnprintf(buffer.data(), buffer.size(), text, args);
@@ -281,7 +353,9 @@ int main() {
 
 	Settings settings;
 	Content content;
-	Session session(settings, content);
+
+	std::unique_ptr<Mode> mode;
+	mode.reset(new SplashScreen(settings, content));
 
 	while (!WindowShouldClose()) {
 
@@ -289,12 +363,16 @@ int main() {
 			settings.pausePhysics = !settings.pausePhysics;
 		}
 
+		std::optional<Mode*> new_mode = mode->update();
+
 		BeginDrawing();
-
-		session.update();
-		session.render();
-
+		mode->render();
 		EndDrawing();
+
+		if (new_mode.has_value()) {
+			mode.reset();
+			mode.reset(*new_mode);
+		}
 	}
 
 	CloseWindow();
