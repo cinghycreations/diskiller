@@ -2,11 +2,14 @@
 #include <tileson.h>
 #include <spdlog/spdlog.h>
 #include <spdlog/sinks/stdout_color_sinks.h>
+#include <spdlog/fmt/ostr.h>
 #include <glm/ext/scalar_constants.hpp>
 
 std::shared_ptr<spdlog::sinks::sink> consoleSink;
 std::shared_ptr<spdlog::logger> raylibLog;
+std::shared_ptr<spdlog::logger> contentLog;
 std::shared_ptr<spdlog::logger> logicLog;
+std::shared_ptr<spdlog::logger> gameSkeletonLog;
 
 class SplashScreen;
 
@@ -36,15 +39,19 @@ struct Content {
 	Font font;
 
 	Content() {
+		contentLog->info("Loading sprites");
 		sprites = LoadTexture("diskiller.png");
 
+		contentLog->info("Loading map");
 		tson::Tileson parser(std::unique_ptr<tson::IJson>(new tson::NlohmannJson));
 		map = parser.parse("diskiller.tmj");
 
+		contentLog->info("Loading font");
 		font = LoadFontEx("cour.ttf", 96, nullptr, 0);
 	}
 
 	~Content() {
+		contentLog->info("Unloading all");
 		UnloadTexture(sprites);
 		UnloadFont(font);
 	}
@@ -71,6 +78,21 @@ struct SessionDef {
 	int bestScoreMaxDisks;
 };
 
+std::ostream& operator<<(std::ostream& stream, const SessionType& session_type) {
+	switch (session_type) {
+	case SessionType::BestScore:
+		stream << "BestScore";
+	case SessionType::Survival:
+		stream << "Survival";
+	}
+
+	return stream;
+}
+
+std::ostream& operator<<(std::ostream& stream, const glm::vec2& v) {
+	return stream << "(" << v.x << "," << v.y << ")";
+}
+
 class UiScreen : public GameScreen {
 protected:
 	Camera2D camera;
@@ -87,6 +109,7 @@ protected:
 class SplashScreen : public UiScreen {
 public:
 	SplashScreen(const Settings& _settings, Content& _content) : settings(_settings), content(_content) {
+		gameSkeletonLog->info("Created SplashScreen");
 	}
 
 	std::optional<GameScreen*> update() override;
@@ -129,6 +152,7 @@ private:
 class Session : public GameScreen {
 public:
 	Session(const Settings& _settings, Content& _content, const SessionDef& session_def) : settings(_settings), content(_content), sessionDef(session_def) {
+		gameSkeletonLog->info("Created Session, type = {}, bestScoreMaxDisks = {}", sessionDef.type, sessionDef.bestScoreMaxDisks);
 		memset(&camera, 0, sizeof(Camera2D));
 	}
 
@@ -149,6 +173,7 @@ public:
 			rifle_angle = std::clamp<float>(rifle_angle, 0, glm::pi<float>() / 2);
 
 			if (IsKeyPressed(KEY_SPACE)) {
+				logicLog->info("Shooting");
 				shot = true;
 			}
 		}
@@ -164,7 +189,7 @@ public:
 				bool destroyed = false;
 
 				if (shot && collideLineCircle(iter->position, settings.diskColliderSize, rifle_start, rifle_end)) {
-					logicLog->info("Disk hit!");
+					logicLog->info("Disk hit, hitDisks = {}", hitDisks + 1);
 
 					Explosion explosion;
 					explosion.position = iter->position;
@@ -176,6 +201,8 @@ public:
 				}
 
 				if (iter->position.y > 16) {
+					logicLog->info("Disk disappeared");
+
 					if (sessionDef.type == SessionType::Survival) {
 						return new SplashScreen(settings, content);
 					}
@@ -218,9 +245,10 @@ public:
 			disk.position.x = traveled_distance > 0 ? randomFloat(2, 14 - traveled_distance) : randomFloat(2 - traveled_distance, 14);
 			disk.position.y = 16;
 
-			logicLog->debug("Spawned disk: velocity.x = {}, velocity.y = {}, time_in_air = {}, traveled_distance = {}, position.x = {}, position.y = {}", disk.velocity.x, disk.velocity.y, time_in_air, traveled_distance, disk.position.x, disk.position.y);
 			disks.push_back(disk);
 			totalDisks += 1;
+
+			logicLog->info("Disk spawned: totalDisks = {}, velocity = {}, time_in_air = {}, traveled_distance = {}, position = {}", totalDisks, disk.velocity, time_in_air, traveled_distance, disk.position);
 		}
 
 		return std::nullopt;
@@ -329,9 +357,11 @@ private:
 		const float cath = glm::dot(circle_center - line_start, line_end - line_start) / glm::length(line_end - line_start);
 
 		const float dist = std::sqrt(hyp * hyp - cath * cath);
-		logicLog->debug("Hit dist: {}", dist);
+		const bool result = hyp * hyp - cath * cath < circle_radius * circle_radius;
 
-		return hyp * hyp - cath * cath < circle_radius * circle_radius;
+		logicLog->debug("collideLineCircle: dist = {}, result = {}", dist, result);
+
+		return result;
 	}
 };
 
@@ -401,10 +431,13 @@ static void traceLogCallback(int logLevel, const char* text, va_list args) {
 }
 
 int main() {
-	consoleSink.reset(new spdlog::sinks::stdout_color_sink_mt);
+	consoleSink.reset(new spdlog::sinks::stdout_color_sink_st);
 	raylibLog.reset(new spdlog::logger("raylib", consoleSink));
+	contentLog.reset(new spdlog::logger("content", consoleSink));
 	logicLog.reset(new spdlog::logger("logic", consoleSink));
-	logicLog->set_level(spdlog::level::debug);
+	gameSkeletonLog.reset(new spdlog::logger("gameSkeleton", consoleSink));
+
+	raylibLog->set_level(spdlog::level::warn);
 
 	SetConfigFlags(FLAG_WINDOW_RESIZABLE);
 	SetTraceLogCallback(&traceLogCallback);
@@ -412,6 +445,8 @@ int main() {
 
 	auto load_settings = []() -> Settings
 	{
+		gameSkeletonLog->info("Loading settings");
+
 		std::ifstream stream("settings.json");
 
 		nlohmann::json json;
@@ -441,6 +476,7 @@ int main() {
 		EndDrawing();
 
 		if (new_screen.has_value()) {
+			gameSkeletonLog->info("New game screen detected");
 			game_screen.reset();
 			game_screen.reset(*new_screen);
 		}
