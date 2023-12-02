@@ -20,6 +20,16 @@ struct Settings {
 	float explosionLifetime = 2.0f;
 };
 
+void from_json(const nlohmann::json& json, Settings& settings) {
+	json.at("gravity").get_to(settings.gravity);
+	json.at("diskDelay").get_to(settings.diskDelay);
+	json.at("diskColliderSize").get_to(settings.diskColliderSize);
+	json.at("diskColliderDebugDraw").get_to(settings.diskColliderDebugDraw);
+	json.at("rifleSpeed").get_to(settings.rifleSpeed);
+	json.at("rifleLength").get_to(settings.rifleLength);
+	json.at("explosionLifetime").get_to(settings.explosionLifetime);
+}
+
 struct Content {
 	Texture2D sprites;
 	std::unique_ptr<tson::Map> map;
@@ -400,13 +410,30 @@ int main() {
 	SetTraceLogCallback(&traceLogCallback);
 	InitWindow(720, 720, "Diskiller");
 
-	Settings settings;
+	auto load_settings = []() -> Settings
+	{
+		std::ifstream stream("settings.json");
+
+		nlohmann::json json;
+		stream >> json;
+
+		Settings settings;
+		settings = json;
+
+		return settings;
+	};
+
+	Settings settings = load_settings();
 	Content content;
 
 	std::unique_ptr<GameScreen> game_screen;
 	game_screen.reset(new SplashScreen(settings, content));
 
 	while (!WindowShouldClose()) {
+		if (IsKeyPressed(KEY_F5)) {
+			settings = load_settings();
+		}
+
 		std::optional<GameScreen*> new_screen = game_screen->update();
 
 		BeginDrawing();
