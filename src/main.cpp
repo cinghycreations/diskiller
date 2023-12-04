@@ -15,7 +15,7 @@ class SplashScreen;
 
 struct Settings {
 	float gravity = 9.81;
-	float diskDelay = 1.0f;
+	float turnDelay = 1.0f;
 	float diskColliderSize = 0.40f;
 	bool diskColliderDebugDraw = false;
 	float rifleSpeed = 1.0f;
@@ -25,7 +25,7 @@ struct Settings {
 
 void from_json(const nlohmann::json& json, Settings& settings) {
 	json.at("gravity").get_to(settings.gravity);
-	json.at("diskDelay").get_to(settings.diskDelay);
+	json.at("turnDelay").get_to(settings.turnDelay);
 	json.at("diskColliderSize").get_to(settings.diskColliderSize);
 	json.at("diskColliderDebugDraw").get_to(settings.diskColliderDebugDraw);
 	json.at("rifleSpeed").get_to(settings.rifleSpeed);
@@ -75,7 +75,8 @@ enum class SessionType {
 
 struct SessionDef {
 	SessionType type;
-	int bestScoreMaxDisks;
+	int turnCount;
+	int disksPerTurn;
 };
 
 std::ostream& operator<<(std::ostream& stream, const SessionType& session_type) {
@@ -135,12 +136,15 @@ private:
 		SessionDef sessionDef;
 	};
 
-	const std::array<GameMode, 5> gameModes = {
-		GameMode { "Best of 10", SessionDef { SessionType::BestScore, 10 } },
-		GameMode { "Best of 25", SessionDef { SessionType::BestScore, 25 } },
-		GameMode { "Best of 50", SessionDef { SessionType::BestScore, 50 } },
-		GameMode { "Best of 100", SessionDef { SessionType::BestScore, 100 } },
-		GameMode { "Survival", SessionDef { SessionType::Survival } },
+	const std::array<GameMode, 10> gameModes = {
+		GameMode { "Best of 10", SessionDef { SessionType::BestScore, 10, 1 } },
+		GameMode { "Best of 25", SessionDef { SessionType::BestScore, 25, 1 } },
+		GameMode { "Best of 100", SessionDef { SessionType::BestScore, 100, 1 } },
+		GameMode { "Survival", SessionDef { SessionType::Survival, 0, 1 } },
+		GameMode { "Expert Best of 10", SessionDef { SessionType::BestScore, 10, 3 } },
+		GameMode { "Expert Best of 25", SessionDef { SessionType::BestScore, 25, 3 } },
+		GameMode { "Expert Best of 100", SessionDef { SessionType::BestScore, 100, 3 } },
+		GameMode { "Expert Survival", SessionDef { SessionType::Survival, 0, 3 } },
 	};
 
 	const Settings& settings;
@@ -152,7 +156,7 @@ private:
 class Session : public GameScreen {
 public:
 	Session(const Settings& _settings, Content& _content, const SessionDef& session_def) : settings(_settings), content(_content), sessionDef(session_def) {
-		gameSkeletonLog->info("Created Session, type = {}, bestScoreMaxDisks = {}", sessionDef.type, sessionDef.bestScoreMaxDisks);
+		gameSkeletonLog->info("Created Session, type = {}, turnCount = {}, disksPerTurn = {}", sessionDef.type, sessionDef.turnCount, sessionDef.disksPerTurn);
 		memset(&camera, 0, sizeof(Camera2D));
 	}
 
@@ -161,16 +165,44 @@ public:
 			return new SplashScreen(settings, content);
 		}
 
+		if (disks.empty() && GetTime() - lastTurnEndTime >= settings.turnDelay) {
+
+			if (sessionDef.type == SessionType::BestScore && currentTurn == sessionDef.turnCount) {
+				return new SplashScreen(settings, content);
+			}
+			else if (sessionDef.type == SessionType::Survival && failedTurns > 0) {
+				return new SplashScreen(settings, content);
+			}
+			else {
+				for (int i = 0; i < sessionDef.disksPerTurn; ++i) {
+					Disk disk;
+					disk.velocity.x = randomFloat(-3, 3);
+					disk.velocity.y = randomFloat(-10, -18);
+
+					const float time_in_air = std::abs(disk.velocity.y / settings.gravity) * 2;
+					const float traveled_distance = disk.velocity.x * time_in_air;
+
+					disk.position.x = traveled_distance > 0 ? randomFloat(2, 14 - traveled_distance) : randomFloat(2 - traveled_distance, 14);
+					disk.position.y = 16;
+					disks.push_back(disk);
+
+					logicLog->info("Disk spawned: velocity = {}, time_in_air = {}, traveled_distance = {}, position = {}", disk.velocity, time_in_air, traveled_distance, disk.position);
+				}
+
+				++currentTurn;
+			}
+		}
+
 		bool shot = false;
 
 		{
 			if (IsKeyDown(KEY_DOWN) || IsKeyDown(KEY_RIGHT)) {
-				rifle_angle -= settings.rifleSpeed * GetFrameTime();
+				rifleAngle -= settings.rifleSpeed * GetFrameTime();
 			}
 			if (IsKeyDown(KEY_UP) || IsKeyDown(KEY_LEFT)) {
-				rifle_angle += settings.rifleSpeed * GetFrameTime();
+				rifleAngle += settings.rifleSpeed * GetFrameTime();
 			}
-			rifle_angle = std::clamp<float>(rifle_angle, 0, glm::pi<float>() / 2);
+			rifleAngle = std::clamp<float>(rifleAngle, 0, glm::pi<float>() / 2);
 
 			if (IsKeyPressed(KEY_SPACE)) {
 				logicLog->info("Shooting");
@@ -180,44 +212,34 @@ public:
 
 		{
 			const glm::vec2 rifle_start(0.5f, 13.5f);
-			const glm::vec2 rifle_end = rifle_start + glm::vec2(std::cos(rifle_angle), -std::sin(rifle_angle)) * 20.0f;
+			const glm::vec2 rifle_end = rifle_start + glm::vec2(std::cos(rifleAngle), -std::sin(rifleAngle)) * 20.0f;
 
 			for (auto iter = disks.begin(); iter != disks.end();) {
 				iter->position += iter->velocity * GetFrameTime();
 				iter->velocity += glm::vec2(0, settings.gravity) * GetFrameTime();
 
-				bool destroyed = false;
-
 				if (shot && collideLineCircle(iter->position, settings.diskColliderSize, rifle_start, rifle_end)) {
-					logicLog->info("Disk hit, hitDisks = {}", hitDisks + 1);
+					logicLog->info("Disk hit");
 
 					Explosion explosion;
 					explosion.position = iter->position;
 					explosion.timeCreated = GetTime();
 					explosions.push_back(explosion);
 
-					hitDisks += 1;
-					destroyed = true;
-				}
-
-				if (iter->position.y > 16) {
-					logicLog->info("Disk disappeared");
-
-					if (sessionDef.type == SessionType::Survival) {
-						return new SplashScreen(settings, content);
-					}
-					else if (sessionDef.type == SessionType::BestScore) {
-						if (totalDisks == sessionDef.bestScoreMaxDisks) {
-							return new SplashScreen(settings, content);
-						}
-					}
-
-					destroyed = true;
-				}
-
-				if (destroyed) {
 					iter = disks.erase(iter);
-					lastDiskTime = GetTime();
+					if (disks.empty()) {
+						++successfulTurns;
+						lastTurnEndTime = GetTime();
+					}
+				}
+				else if (iter->position.y > 16) {
+					logicLog->info("Disk missed");
+
+					iter = disks.erase(iter);
+					if (disks.empty()) {
+						++failedTurns;
+						lastTurnEndTime = GetTime();
+					}
 				}
 				else {
 					++iter;
@@ -232,23 +254,6 @@ public:
 			else {
 				++iter;
 			}
-		}
-
-		if (disks.empty() && GetTime() - lastDiskTime >= settings.diskDelay) {
-			Disk disk;
-			disk.velocity.x = randomFloat(-3, 3);
-			disk.velocity.y = randomFloat(-10, -18);
-
-			const float time_in_air = std::abs(disk.velocity.y / settings.gravity) * 2;
-			const float traveled_distance = disk.velocity.x * time_in_air;
-
-			disk.position.x = traveled_distance > 0 ? randomFloat(2, 14 - traveled_distance) : randomFloat(2 - traveled_distance, 14);
-			disk.position.y = 16;
-
-			disks.push_back(disk);
-			totalDisks += 1;
-
-			logicLog->info("Disk spawned: totalDisks = {}, velocity = {}, time_in_air = {}, traveled_distance = {}, position = {}", totalDisks, disk.velocity, time_in_air, traveled_distance, disk.position);
 		}
 
 		return std::nullopt;
@@ -299,17 +304,17 @@ public:
 
 		{
 			const glm::vec2 rifle_start(0.5f, 13.5f);
-			const glm::vec2 rifle_end = rifle_start + glm::vec2(std::cos(rifle_angle), -std::sin(rifle_angle)) * settings.rifleLength;
+			const glm::vec2 rifle_end = rifle_start + glm::vec2(std::cos(rifleAngle), -std::sin(rifleAngle)) * settings.rifleLength;
 			DrawLineEx(Vector2{ rifle_start.x, rifle_start.y }, Vector2{ rifle_end.x, rifle_end.y }, 0.1f, YELLOW);
 		}
 
 		{
 			std::string score;
 			if (sessionDef.type == SessionType::BestScore) {
-				score = fmt::format("Score {}, Disk {}/{}", hitDisks, totalDisks, sessionDef.bestScoreMaxDisks);
+				score = fmt::format("Score {}, Turn {}/{}", successfulTurns, currentTurn, sessionDef.turnCount);
 			}
 			else {
-				score = fmt::format("Score {}", hitDisks);
+				score = fmt::format("Score {}", successfulTurns);
 			}
 			DrawTextEx(content.font, score.c_str(), Vector2{ 0, 0 }, 1, 0, BLACK);
 		}
@@ -346,11 +351,13 @@ private:
 	Camera2D camera;
 
 	std::list<Disk> disks;
+	int currentTurn = 0;
+	int successfulTurns = 0;
+	int failedTurns = 0;
+	double lastTurnEndTime = 0;
+
+	float rifleAngle = 0;
 	std::list<Explosion> explosions;
-	double lastDiskTime = 0;
-	float rifle_angle = 0;
-	int totalDisks = 0;
-	int hitDisks = 0;
 
 	static bool collideLineCircle(const glm::vec2& circle_center, const float circle_radius, const glm::vec2& line_start, const glm::vec2& line_end) {
 		const float hyp = glm::length(circle_center - line_start);
