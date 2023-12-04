@@ -20,6 +20,7 @@ struct Settings {
 	bool diskColliderDebugDraw = false;
 	float rifleSpeed = 1.0f;
 	float rifleLength = 1.5f;
+	float rifleShootDelay = 0.5f;
 	float explosionLifetime = 2.0f;
 };
 
@@ -30,6 +31,7 @@ void from_json(const nlohmann::json& json, Settings& settings) {
 	json.at("diskColliderDebugDraw").get_to(settings.diskColliderDebugDraw);
 	json.at("rifleSpeed").get_to(settings.rifleSpeed);
 	json.at("rifleLength").get_to(settings.rifleLength);
+	json.at("rifleShootDelay").get_to(settings.rifleShootDelay);
 	json.at("explosionLifetime").get_to(settings.explosionLifetime);
 }
 
@@ -193,7 +195,7 @@ public:
 			}
 		}
 
-		bool shot = false;
+		bool projectile = false;
 
 		{
 			if (IsKeyDown(KEY_DOWN) || IsKeyDown(KEY_RIGHT)) {
@@ -204,9 +206,10 @@ public:
 			}
 			rifleAngle = std::clamp<float>(rifleAngle, 0, glm::pi<float>() / 2);
 
-			if (IsKeyPressed(KEY_SPACE)) {
+			if (IsKeyPressed(KEY_SPACE) && GetTime() - lastShotTime >= settings.rifleShootDelay) {
 				logicLog->info("Shooting");
-				shot = true;
+				projectile = true;
+				lastShotTime = GetTime();
 			}
 		}
 
@@ -218,8 +221,10 @@ public:
 				iter->position += iter->velocity * GetFrameTime();
 				iter->velocity += glm::vec2(0, settings.gravity) * GetFrameTime();
 
-				if (shot && collideLineCircle(iter->position, settings.diskColliderSize, rifle_start, rifle_end)) {
+				if (projectile && collideLineCircle(iter->position, settings.diskColliderSize, rifle_start, rifle_end)) {
 					logicLog->info("Disk hit");
+
+					projectile = false;
 
 					Explosion explosion;
 					explosion.position = iter->position;
@@ -357,6 +362,7 @@ private:
 	double lastTurnEndTime = 0;
 
 	float rifleAngle = 0;
+	double lastShotTime = 0;
 	std::list<Explosion> explosions;
 
 	static bool collideLineCircle(const glm::vec2& circle_center, const float circle_radius, const glm::vec2& line_start, const glm::vec2& line_end) {
