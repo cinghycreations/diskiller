@@ -1,9 +1,10 @@
 {
   "gravity": 9.81,
-  "diskDelay": 1.0,
-  "diskColliderSize": 0.4,
-  "diskColliderDebugDraw": false,
+  "turnDelay": 1.0,
+  "diskColliderSize": 0.8,
+  "diskColliderDebugDraw": true,
   "rifleSpeed": 1.0,
   "rifleLength": 1.5,
+  "rifleShootDelay": 0.25,
   "explosionLifetime": 2.0
 }
