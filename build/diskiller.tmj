@@ -1,4 +1,4 @@
-{ "backgroundcolor":"#29ceff",
+{ "backgroundcolor":"#7686ff",
  "compressionlevel":-1,
  "height":16,
  "infinite":false,
@@ -138,27 +138,52 @@
          "x":0,
          "y":0
         }],
- "nextlayerid":3,
- "nextobjectid":9,
+ "nextlayerid":7,
+ "nextobjectid":12,
  "orientation":"orthogonal",
  "renderorder":"right-down",
- "tiledversion":"1.10.1",
+ "tiledversion":"1.10.2",
  "tileheight":64,
  "tilesets":[
-  {
-    "columns": 8,
-    "firstgid": 1,
-    "image": "diskiller.png",
-    "imageheight": 96,
-    "imagewidth": 128,
-    "margin": 0,
-    "name": "diskiller",
-    "spacing": 0,
-    "tilecount": 48,
-    "tileheight": 16,
-    "tilerendersize": "grid",
-    "tilewidth": 16
-  }],
+        {
+         "columns":8,
+         "firstgid":1,
+         "image":"diskiller.png",
+         "imageheight":96,
+         "imagewidth":128,
+         "margin":0,
+         "name":"diskiller",
+         "spacing":0,
+         "tilecount":48,
+         "tileheight":16,
+         "tilerendersize":"grid",
+         "tiles":[
+                {
+                 "id":1,
+                 "type":"rock"
+                }, 
+                {
+                 "id":20,
+                 "type":"disk"
+                }, 
+                {
+                 "id":23,
+                 "type":"tree_top"
+                }, 
+                {
+                 "id":30,
+                 "type":"character"
+                }, 
+                {
+                 "id":31,
+                 "type":"tree_bottom"
+                }, 
+                {
+                 "id":35,
+                 "type":"explosion"
+                }],
+         "tilewidth":16
+        }],
  "tilewidth":64,
  "type":"map",
  "version":"1.10",

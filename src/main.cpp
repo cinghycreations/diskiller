@@ -160,6 +160,26 @@ public:
 	Session(const Settings& _settings, Content& _content, const SessionDef& session_def) : settings(_settings), content(_content), sessionDef(session_def) {
 		gameSkeletonLog->info("Created Session, type = {}, turnCount = {}, disksPerTurn = {}", sessionDef.type, sessionDef.turnCount, sessionDef.disksPerTurn);
 		memset(&camera, 0, sizeof(Camera2D));
+
+		auto find_tile = [&content = content](const std::string& tile_class) -> const tson::Tile* {
+			for (tson::Tileset& tileset : content.map->getTilesets()) {
+				for (tson::Tile& tile : tileset.getTiles()) {
+					if (tile.getClassType() == tile_class) {
+						return &tile;
+					}
+				}
+			}
+
+			contentLog->critical("Could not find tile for class {}", tile_class);
+			return nullptr;
+		};
+
+		characterTile = find_tile("character");
+		rockTile = find_tile("rock");
+		treeBottomTile = find_tile("tree_bottom");
+		treeTopTile = find_tile("tree_top");
+		diskTile = find_tile("disk");
+		explosionTile = find_tile("explosion");
 	}
 
 	std::optional<GameScreen*> update() override {
@@ -271,14 +291,6 @@ public:
 		camera.offset.x = (GetScreenWidth() - pixel_per_unit * 16) / 2;
 		camera.offset.y = (GetScreenHeight() - pixel_per_unit * 16) / 2;
 
-		const auto& tiles = content.map->getTileMap();
-		const tson::Tile* character_tile = tiles.at(Tile_Character + 1);
-		const tson::Tile* rock_tile = tiles.at(Tile_Rock + 1);
-		const tson::Tile* treebottom_tile = tiles.at(Tile_TreeBottom + 1);
-		const tson::Tile* treetop_tile = tiles.at(Tile_TreeTop + 1);
-		const tson::Tile* disk_tile = tiles.at(Tile_Disk + 1);
-		const tson::Tile* explosion_tile = tiles.at(Tile_Explosion + 1);
-
 		auto draw_tile = [&content = content](const tson::Tile* tile, const glm::vec2 position) {
 			Rectangle draw_rect;
 			draw_rect.x = tile->getDrawingRect().x / (float(tile->getDrawingRect().width) / float(tile->getTileset()->getTileSize().x));
@@ -290,21 +302,21 @@ public:
 
 		ClearBackground(Color{ content.map->getBackgroundColor().r, content.map->getBackgroundColor().g, content.map->getBackgroundColor().b, content.map->getBackgroundColor().a });
 		BeginMode2D(camera);
-		draw_tile(character_tile, glm::vec2(0, 13));
-		draw_tile(rock_tile, glm::vec2(0, 14));
-		draw_tile(rock_tile, glm::vec2(0, 15));
+		draw_tile(characterTile, glm::vec2(0, 13));
+		draw_tile(rockTile, glm::vec2(0, 14));
+		draw_tile(rockTile, glm::vec2(0, 15));
 		for (int i = 1; i < 16; ++i) {
-			draw_tile(treebottom_tile, glm::vec2(i, 15));
-			draw_tile(treetop_tile, glm::vec2(i, 14));
+			draw_tile(treeBottomTile, glm::vec2(i, 15));
+			draw_tile(treeTopTile, glm::vec2(i, 14));
 		}
 		for (const Disk& disk : disks) {
-			draw_tile(disk_tile, disk.position - glm::vec2(0.5f));
+			draw_tile(diskTile, disk.position - glm::vec2(0.5f));
 			if (settings.diskColliderDebugDraw) {
 				DrawCircleV(Vector2{ disk.position.x, disk.position.y }, settings.diskColliderSize, Color{ 255,0,0,192 });
 			}
 		}
 		for (const Explosion& explosion : explosions) {
-			draw_tile(explosion_tile, explosion.position - glm::vec2(0.5f));
+			draw_tile(explosionTile, explosion.position - glm::vec2(0.5f));
 		}
 
 		{
@@ -348,6 +360,13 @@ private:
 		glm::vec2 position;
 		double timeCreated;
 	};
+
+	const tson::Tile* characterTile = nullptr;
+	const tson::Tile* rockTile = nullptr;
+	const tson::Tile* treeBottomTile = nullptr;
+	const tson::Tile* treeTopTile = nullptr;
+	const tson::Tile* diskTile = nullptr;
+	const tson::Tile* explosionTile = nullptr;
 
 	const Settings& settings;
 	Content& content;
