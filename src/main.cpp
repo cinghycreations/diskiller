@@ -4,6 +4,7 @@
 #include <spdlog/sinks/stdout_color_sinks.h>
 #include <spdlog/fmt/ostr.h>
 #include <glm/ext/scalar_constants.hpp>
+#include <list>
 
 std::shared_ptr<spdlog::sinks::sink> consoleSink;
 std::shared_ptr<spdlog::logger> raylibLog;
@@ -90,8 +91,10 @@ std::ostream& operator<<(std::ostream& stream, const SessionType& session_type) 
 	return stream;
 }
 
-std::ostream& operator<<(std::ostream& stream, const glm::vec2& v) {
-	return stream << "(" << v.x << "," << v.y << ")";
+namespace glm {
+	std::ostream& operator<<(std::ostream& stream, const vec2& v) {
+		return stream << "(" << v.x << "," << v.y << ")";
+	}
 }
 
 class UiScreen : public GameScreen {
