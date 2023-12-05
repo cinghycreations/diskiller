@@ -21,7 +21,6 @@ struct Settings {
 	float rifleSpeed = 1.0f;
 	float rifleLength = 1.5f;
 	float rifleShootDelay = 0.5f;
-	float explosionLifetime = 2.0f;
 };
 
 void from_json(const nlohmann::json& json, Settings& settings) {
@@ -32,7 +31,6 @@ void from_json(const nlohmann::json& json, Settings& settings) {
 	json.at("rifleSpeed").get_to(settings.rifleSpeed);
 	json.at("rifleLength").get_to(settings.rifleLength);
 	json.at("rifleShootDelay").get_to(settings.rifleShootDelay);
-	json.at("explosionLifetime").get_to(settings.explosionLifetime);
 }
 
 struct Content {
@@ -161,7 +159,7 @@ public:
 		gameSkeletonLog->info("Created Session, type = {}, turnCount = {}, disksPerTurn = {}", sessionDef.type, sessionDef.turnCount, sessionDef.disksPerTurn);
 		memset(&camera, 0, sizeof(Camera2D));
 
-		auto find_tile = [&content = content](const std::string& tile_class) -> const tson::Tile* {
+		auto find_tile = [&content = content](const std::string& tile_class) -> tson::Tile* {
 			for (tson::Tileset& tileset : content.map->getTilesets()) {
 				for (tson::Tile& tile : tileset.getTiles()) {
 					if (tile.getClassType() == tile_class) {
@@ -249,6 +247,13 @@ public:
 					Explosion explosion;
 					explosion.position = iter->position;
 					explosion.timeCreated = GetTime();
+					explosion.animation = explosionTile->getAnimation();
+					explosion.animation.reset();
+					explosion.lifetime = 0;
+					for (const tson::Frame& frame : explosion.animation.getFrames()) {
+						explosion.lifetime += double(frame.getDuration()) / 1000.0f;
+					}
+
 					explosions.push_back(explosion);
 
 					iter = disks.erase(iter);
@@ -273,10 +278,11 @@ public:
 		}
 
 		for (auto iter = explosions.begin(); iter != explosions.end();) {
-			if (GetTime() - iter->timeCreated > settings.explosionLifetime) {
+			if (GetTime() - iter->timeCreated >= iter->lifetime) {
 				iter = explosions.erase(iter);
 			}
 			else {
+				iter->animation.update(GetFrameTime() * 1000.0f);
 				++iter;
 			}
 		}
@@ -316,7 +322,9 @@ public:
 			}
 		}
 		for (const Explosion& explosion : explosions) {
-			draw_tile(explosionTile, explosion.position - glm::vec2(0.5f));
+			const uint32_t tile_id = explosion.animation.getCurrentTileId();
+			const tson::Tile* explosion_frame = content.map->getTileMap().at(tile_id);
+			draw_tile(explosion_frame, explosion.position - glm::vec2(0.5f));
 		}
 
 		{
@@ -358,15 +366,17 @@ private:
 	struct Explosion
 	{
 		glm::vec2 position;
+		tson::Animation animation;
 		double timeCreated;
+		double lifetime;
 	};
 
-	const tson::Tile* characterTile = nullptr;
-	const tson::Tile* rockTile = nullptr;
-	const tson::Tile* treeBottomTile = nullptr;
-	const tson::Tile* treeTopTile = nullptr;
-	const tson::Tile* diskTile = nullptr;
-	const tson::Tile* explosionTile = nullptr;
+	tson::Tile* characterTile = nullptr;
+	tson::Tile* rockTile = nullptr;
+	tson::Tile* treeBottomTile = nullptr;
+	tson::Tile* treeTopTile = nullptr;
+	tson::Tile* diskTile = nullptr;
+	tson::Tile* explosionTile = nullptr;
 
 	const Settings& settings;
 	Content& content;

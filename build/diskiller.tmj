@@ -179,6 +179,15 @@
                  "type":"tree_bottom"
                 }, 
                 {
+                 "animation":[
+                        {
+                         "duration":1000,
+                         "tileid":35
+                        }, 
+                        {
+                         "duration":1000,
+                         "tileid":43
+                        }],
                  "id":35,
                  "type":"explosion"
                 }],

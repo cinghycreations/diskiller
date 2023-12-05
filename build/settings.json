@@ -5,6 +5,5 @@
   "diskColliderDebugDraw": true,
   "rifleSpeed": 1.0,
   "rifleLength": 1.5,
-  "rifleShootDelay": 0.25,
-  "explosionLifetime": 2.0
+  "rifleShootDelay": 0.25
 }
