@@ -182,11 +182,15 @@
                  "animation":[
                         {
                          "duration":1000,
-                         "tileid":35
+                         "tileid":3
                         }, 
                         {
                          "duration":1000,
                          "tileid":43
+                        }, 
+                        {
+                         "duration":1000,
+                         "tileid":35
                         }],
                  "id":35,
                  "type":"explosion"
