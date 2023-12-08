@@ -97,6 +97,24 @@ namespace glm {
 	}
 }
 
+struct GameMode {
+	std::string name;
+	SessionDef sessionDef;
+
+	static const std::array<GameMode, 8> gameModes;
+};
+
+const std::array<GameMode, 8> GameMode::gameModes = {
+	GameMode { "Best of 10", SessionDef { SessionType::BestScore, 10, 1 } },
+	GameMode { "Best of 25", SessionDef { SessionType::BestScore, 25, 1 } },
+	GameMode { "Best of 100", SessionDef { SessionType::BestScore, 100, 1 } },
+	GameMode { "Survival", SessionDef { SessionType::Survival, 0, 1 } },
+	GameMode { "Expert Best of 10", SessionDef { SessionType::BestScore, 10, 3 } },
+	GameMode { "Expert Best of 25", SessionDef { SessionType::BestScore, 25, 3 } },
+	GameMode { "Expert Best of 100", SessionDef { SessionType::BestScore, 100, 3 } },
+	GameMode { "Expert Survival", SessionDef { SessionType::Survival, 0, 3 } },
+};
+
 class UiScreen : public GameScreen {
 protected:
 	Camera2D camera;
@@ -108,6 +126,31 @@ protected:
 		camera.offset.x = (GetScreenWidth() - pixel_per_unit * 16) / 2;
 		camera.offset.y = (GetScreenHeight() - pixel_per_unit * 16) / 2;
 	}
+};
+
+class RecordsScreen : public UiScreen {
+public:
+	RecordsScreen(const Settings& _settings, Content& _content) : settings(_settings), content(_content) {
+		gameSkeletonLog->info("Created Records screen");
+	}
+
+	std::optional<GameScreen*> update() override;
+
+	void render() override {
+		setCamera();
+
+		BeginMode2D(camera);
+		ClearBackground(Color{ content.map->getBackgroundColor().r, content.map->getBackgroundColor().g, content.map->getBackgroundColor().b, content.map->getBackgroundColor().a });
+		for (int i = 0; i < GameMode::gameModes.size(); ++i) {
+			DrawTextEx(content.font, GameMode::gameModes.at(i).name.c_str(), Vector2{ 1, float(4 + i) }, 1, 0, BLACK);
+			DrawTextEx(content.font, std::to_string(0).c_str(), Vector2{ 13, float(4 + i) }, 1, 0, BLACK);
+		}
+		EndMode2D();
+	}
+
+private:
+	const Settings& settings;
+	Content& content;
 };
 
 class SplashScreen : public UiScreen {
@@ -125,7 +168,7 @@ public:
 		ClearBackground(Color{ content.map->getBackgroundColor().r, content.map->getBackgroundColor().g, content.map->getBackgroundColor().b, content.map->getBackgroundColor().a });
 		DrawTextEx(content.font, "Diskiller", Vector2{ 4,4 }, 2, 0, BLACK);
 		DrawTextEx(content.font, "Play", Vector2{ 5,8 }, 1, 0, BLACK);
-		DrawTextEx(content.font, fmt::format("Mode: {}", gameModes.at(modeSelection).name).c_str(), Vector2{ 5,9 }, 1, 0, BLACK);
+		DrawTextEx(content.font, fmt::format("Mode: {}", GameMode::gameModes.at(modeSelection).name).c_str(), Vector2{ 5,9 }, 1, 0, BLACK);
 		DrawTextEx(content.font, "Records", Vector2{ 5,10 }, 1, 0, BLACK);
 		DrawTextEx(content.font, "Credits", Vector2{ 5,11 }, 1, 0, BLACK);
 		DrawTextEx(content.font, "Exit", Vector2{ 5,12 }, 1, 0, BLACK);
@@ -134,22 +177,6 @@ public:
 	}
 
 private:
-	struct GameMode {
-		std::string name;
-		SessionDef sessionDef;
-	};
-
-	const std::array<GameMode, 10> gameModes = {
-		GameMode { "Best of 10", SessionDef { SessionType::BestScore, 10, 1 } },
-		GameMode { "Best of 25", SessionDef { SessionType::BestScore, 25, 1 } },
-		GameMode { "Best of 100", SessionDef { SessionType::BestScore, 100, 1 } },
-		GameMode { "Survival", SessionDef { SessionType::Survival, 0, 1 } },
-		GameMode { "Expert Best of 10", SessionDef { SessionType::BestScore, 10, 3 } },
-		GameMode { "Expert Best of 25", SessionDef { SessionType::BestScore, 25, 3 } },
-		GameMode { "Expert Best of 100", SessionDef { SessionType::BestScore, 100, 3 } },
-		GameMode { "Expert Survival", SessionDef { SessionType::Survival, 0, 3 } },
-	};
-
 	const Settings& settings;
 	Content& content;
 	int menuSelection = 0;
@@ -175,10 +202,6 @@ public:
 			return nullptr;
 		};
 
-		characterTile = find_tile("character");
-		rockTile = find_tile("rock");
-		treeBottomTile = find_tile("tree_bottom");
-		treeTopTile = find_tile("tree_top");
 		diskTile = find_tile("disk");
 		explosionTile = find_tile("explosion");
 	}
@@ -311,12 +334,19 @@ public:
 
 		ClearBackground(Color{ content.map->getBackgroundColor().r, content.map->getBackgroundColor().g, content.map->getBackgroundColor().b, content.map->getBackgroundColor().a });
 		BeginMode2D(camera);
-		draw_tile(characterTile, glm::vec2(0, 13));
-		draw_tile(rockTile, glm::vec2(0, 14));
-		draw_tile(rockTile, glm::vec2(0, 15));
-		for (int i = 1; i < 16; ++i) {
-			draw_tile(treeBottomTile, glm::vec2(i, 15));
-			draw_tile(treeTopTile, glm::vec2(i, 14));
+
+		for (tson::Layer& layer : content.map->getLayers()) {
+			if (layer.getType() == tson::LayerType::TileLayer && layer.get<bool>("static")) {
+				for (int i = 0; i < layer.getSize().x; ++i) {
+					for (int j = 0; j < layer.getSize().y; ++j) {
+						if (!layer.getTileData().count({ j,i })) {
+							continue;
+						}
+						tson::Tile* tile = layer.getTileData().at({ j,i });
+						draw_tile(tile, glm::ivec2{j, i});
+					}
+				}
+			}
 		}
 		for (const Disk& disk : disks) {
 			draw_tile(diskTile, disk.position - glm::vec2(0.5f));
@@ -351,15 +381,6 @@ public:
 	}
 
 private:
-	enum {
-		Tile_Character = 30,
-		Tile_Rock = 1,
-		Tile_TreeBottom = 31,
-		Tile_TreeTop = 23,
-		Tile_Disk = 20,
-		Tile_Explosion = 35,
-	};
-
 	struct Disk
 	{
 		glm::vec2 position;
@@ -374,10 +395,6 @@ private:
 		double lifetime;
 	};
 
-	tson::Tile* characterTile = nullptr;
-	tson::Tile* rockTile = nullptr;
-	tson::Tile* treeBottomTile = nullptr;
-	tson::Tile* treeTopTile = nullptr;
 	tson::Tile* diskTile = nullptr;
 	tson::Tile* explosionTile = nullptr;
 
@@ -423,11 +440,14 @@ std::optional<GameScreen*> SplashScreen::update() {
 		switch (menuSelection)
 		{
 		case 0:
-			return new Session(settings, content, gameModes.at(modeSelection).sessionDef);
+			return new Session(settings, content, GameMode::gameModes.at(modeSelection).sessionDef);
 
 		case 1:
-			modeSelection = (modeSelection + 1) % gameModes.size();
+			modeSelection = (modeSelection + 1) % GameMode::gameModes.size();
 			break;
+
+		case 2:
+			return new RecordsScreen(settings, content);
 
 		case 4:
 			exit(0);
@@ -435,6 +455,14 @@ std::optional<GameScreen*> SplashScreen::update() {
 		default:
 			break;
 		}
+	}
+
+	return std::nullopt;
+}
+
+std::optional<GameScreen*> RecordsScreen::update() {
+	if (IsKeyPressed(KEY_BACKSPACE)) {
+		return new SplashScreen(settings, content);
 	}
 
 	return std::nullopt;
