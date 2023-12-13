@@ -17,28 +17,28 @@ rule wsl-cmake-build
 build temp/build/windows/diskiller.sln: cmake-gen
   binarydir = temp/build/windows
 
-build temp/build/linux/Makefile: wsl-cmake-gen
+build temp/build/linux/build.ninja: wsl-cmake-gen
   binarydir = temp/build/linux
-  flags = -D CMAKE_BUILD_TYPE=Release
+  flags = -G Ninja -D CMAKE_BUILD_TYPE=Release
 
-build temp/build/raspberrypi32/Makefile: wsl-cmake-gen
+build temp/build/raspberrypi32/build.ninja: wsl-cmake-gen
   binarydir = temp/build/raspberrypi32
-  flags = -D CMAKE_C_COMPILER=arm-linux-gnueabihf-gcc -D CMAKE_CXX_COMPILER=arm-linux-gnueabihf-g++ -D PLATFORM=DRM -D CMAKE_BUILD_TYPE=Release
+  flags = -G Ninja -D CMAKE_C_COMPILER=arm-linux-gnueabihf-gcc -D CMAKE_CXX_COMPILER=arm-linux-gnueabihf-g++ -D PLATFORM=DRM -D CMAKE_BUILD_TYPE=Release
 
-build temp/build/raspberrypi64/Makefile: wsl-cmake-gen
+build temp/build/raspberrypi64/build.ninja: wsl-cmake-gen
   binarydir = temp/build/raspberrypi64
-  flags = -D CMAKE_C_COMPILER=aarch64-linux-gnu-gcc -D CMAKE_CXX_COMPILER=aarch64-linux-gnu-g++ -D PLATFORM=DRM -D CMAKE_BUILD_TYPE=Release
+  flags = -G Ninja -D CMAKE_C_COMPILER=aarch64-linux-gnu-gcc -D CMAKE_CXX_COMPILER=aarch64-linux-gnu-g++ -D PLATFORM=DRM -D CMAKE_BUILD_TYPE=Release
 
 build temp/build/windows/Release/diskiller.exe: cmake-build temp/build/windows/diskiller.sln
   binarydir = temp/build/windows
 
-build temp/build/linux/diskiller: wsl-cmake-build temp/build/linux/Makefile
+build temp/build/linux/diskiller: wsl-cmake-build temp/build/linux/build.ninja
   binarydir = temp/build/linux
 
-build temp/build/raspberrypi32/diskiller: wsl-cmake-build temp/build/raspberrypi32/Makefile
+build temp/build/raspberrypi32/diskiller: wsl-cmake-build temp/build/raspberrypi32/build.ninja
   binarydir = temp/build/raspberrypi32
 
-build temp/build/raspberrypi64/diskiller: wsl-cmake-build temp/build/raspberrypi64/Makefile
+build temp/build/raspberrypi64/diskiller: wsl-cmake-build temp/build/raspberrypi64/build.ninja
   binarydir = temp/build/raspberrypi64
 
 build windows: phony temp/build/windows/Release/diskiller.exe
