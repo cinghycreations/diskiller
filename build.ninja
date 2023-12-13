@@ -1,3 +1,6 @@
+game = diskiller
+version = 0.1
+
 rule cmake-gen
   command = cmake -S . -B $binarydir $flags
   pool = console
@@ -14,7 +17,10 @@ rule wsl-cmake-build
   command = wsl cmake --build $binarydir  --config Release
   pool = console
 
-build temp/build/windows/diskiller.sln: cmake-gen
+rule archive
+  command = tar -acf $out -C build * -C .. -C $exefolder $executable
+
+build temp/build/windows/$game.sln: cmake-gen
   binarydir = temp/build/windows
 
 build temp/build/linux/build.ninja: wsl-cmake-gen
@@ -29,21 +35,38 @@ build temp/build/raspberrypi64/build.ninja: wsl-cmake-gen
   binarydir = temp/build/raspberrypi64
   flags = -G Ninja -D CMAKE_C_COMPILER=aarch64-linux-gnu-gcc -D CMAKE_CXX_COMPILER=aarch64-linux-gnu-g++ -D PLATFORM=DRM -D CMAKE_BUILD_TYPE=Release
 
-build temp/build/windows/Release/diskiller.exe: cmake-build temp/build/windows/diskiller.sln
+build temp/build/windows/Release/$game.exe: cmake-build temp/build/windows/$game.sln
   binarydir = temp/build/windows
 
-build temp/build/linux/diskiller: wsl-cmake-build temp/build/linux/build.ninja
+build temp/build/linux/$game: wsl-cmake-build temp/build/linux/build.ninja
   binarydir = temp/build/linux
 
-build temp/build/raspberrypi32/diskiller: wsl-cmake-build temp/build/raspberrypi32/build.ninja
+build temp/build/raspberrypi32/$game: wsl-cmake-build temp/build/raspberrypi32/build.ninja
   binarydir = temp/build/raspberrypi32
 
-build temp/build/raspberrypi64/diskiller: wsl-cmake-build temp/build/raspberrypi64/build.ninja
+build temp/build/raspberrypi64/$game: wsl-cmake-build temp/build/raspberrypi64/build.ninja
   binarydir = temp/build/raspberrypi64
 
-build windows: phony temp/build/windows/Release/diskiller.exe
-build linux: phony temp/build/linux/diskiller
-build raspberrypi32: phony temp/build/raspberrypi32/diskiller
-build raspberrypi64: phony temp/build/raspberrypi64/diskiller
-build all: phony windows linux raspberrypi32 raspberrypi64
-default all
+build temp/build/diskiller_windows_$version.zip: archive temp/build/windows/Release/$game.exe
+  exefolder = temp/build/windows/Release
+  executable = $game.exe
+
+build temp/build/diskiller_linux_$version.zip: archive temp/build/linux/$game
+  exefolder = temp/build/linux
+  executable = $game
+
+build temp/build/diskiller_raspberrypi32_$version.zip: archive temp/build/raspberrypi32/$game
+  exefolder = temp/build/raspberrypi32
+  executable = $game
+
+build temp/build/diskiller_raspberrypi64_$version.zip: archive temp/build/raspberrypi64/$game
+  exefolder = temp/build/raspberrypi64
+  executable = $game
+
+build executables: phony temp/build/windows/Release/$game.exe temp/build/linux/$game temp/build/raspberrypi32/$game temp/build/raspberrypi64/$game
+build windows: phony temp/build/diskiller_windows_$version.zip
+build linux: phony temp/build/diskiller_linux_$version.zip
+build raspberrypi32: phony temp/build/diskiller_raspberrypi32_$version.zip
+build raspberrypi64: phony temp/build/diskiller_raspberrypi64_$version.zip
+build packages: phony windows linux raspberrypi32 raspberrypi64
+default packages
