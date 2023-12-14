@@ -167,12 +167,12 @@ public:
 		BeginMode2D(camera);
 		ClearBackground(Color{ content.map->getBackgroundColor().r, content.map->getBackgroundColor().g, content.map->getBackgroundColor().b, content.map->getBackgroundColor().a });
 		DrawTextEx(content.font, "Diskiller", Vector2{ 4,4 }, 2, 0, BLACK);
-		DrawTextEx(content.font, "Play", Vector2{ 5,8 }, 1, 0, BLACK);
-		DrawTextEx(content.font, fmt::format("Mode: {}", GameMode::gameModes.at(modeSelection).name).c_str(), Vector2{ 5,9 }, 1, 0, BLACK);
-		DrawTextEx(content.font, "Records", Vector2{ 5,10 }, 1, 0, BLACK);
-		DrawTextEx(content.font, "Credits", Vector2{ 5,11 }, 1, 0, BLACK);
-		DrawTextEx(content.font, "Exit", Vector2{ 5,12 }, 1, 0, BLACK);
-		DrawTextEx(content.font, ">", Vector2{ 4, float(8 + menuSelection) }, 1, 0, BLACK);
+		DrawTextEx(content.font, "Play", Vector2{ 3,8 }, 1, 0, BLACK);
+		DrawTextEx(content.font, fmt::format("Mode: {}", GameMode::gameModes.at(modeSelection).name).c_str(), Vector2{ 3,9 }, 1, 0, BLACK);
+		DrawTextEx(content.font, "Records", Vector2{ 3,10 }, 1, 0, BLACK);
+		DrawTextEx(content.font, "Credits", Vector2{ 3,11 }, 1, 0, BLACK);
+		DrawTextEx(content.font, "Exit", Vector2{ 3,12 }, 1, 0, BLACK);
+		DrawTextEx(content.font, ">", Vector2{ 2, float(8 + menuSelection) }, 1, 0, BLACK);
 		EndMode2D();
 	}
 
