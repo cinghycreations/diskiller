@@ -48,6 +48,10 @@ struct Content {
 	std::unique_ptr<tson::Map> map;
 	Font font;
 
+	Sound reload;
+	Sound shoot;
+	Sound menuMusic;
+
 	Content() {
 		contentLog->info("Loading sprites");
 		sprites = LoadTexture("diskiller.png");
@@ -58,6 +62,10 @@ struct Content {
 
 		contentLog->info("Loading font");
 		font = LoadFontEx("cour.ttf", 96, nullptr, 0);
+
+		reload = LoadSound("reload.mp3");
+		shoot = LoadSound("shoot.mp3");
+		menuMusic = LoadSound("menu_music.mp3");
 	}
 
 	~Content() {
@@ -74,6 +82,7 @@ static float randomFloat(const float min, const float max) {
 class GameScreen {
 public:
 
+	virtual ~GameScreen() {}
 	virtual std::optional<GameScreen*> update() = 0;
 	virtual void render() = 0;
 };
@@ -166,6 +175,11 @@ class SplashScreen : public UiScreen {
 public:
 	SplashScreen(const Settings& _settings, Content& _content) : settings(_settings), content(_content) {
 		gameSkeletonLog->info("Created SplashScreen");
+		PlaySound(content.menuMusic);
+	}
+
+	~SplashScreen() {
+		StopSound(content.menuMusic);
 	}
 
 	std::optional<GameScreen*> update() override;
@@ -259,10 +273,21 @@ public:
 			}
 			rifleAngle = std::clamp<float>(rifleAngle, 0, glm::pi<float>() / 2);
 
-			if ((IsKeyPressed(KEY_SPACE) || IsGamepadButtonPressed(0, GAMEPAD_X)) && GetTime() - lastShotTime >= settings.rifleShootDelay) {
-				logicLog->info("Shooting");
-				projectile = true;
-				lastShotTime = GetTime();
+			if (reloaded) {
+				if (IsKeyPressed(KEY_SPACE) || IsGamepadButtonPressed(0, GAMEPAD_X)) {
+					logicLog->info("Shooting");
+					projectile = true;
+					reloaded = false;
+					lastShotTime = GetTime();
+					PlaySound(content.shoot);
+				}
+			}
+			else {
+				if (GetTime() - lastShotTime >= settings.rifleShootDelay) {
+					logicLog->info("Reloading");
+					reloaded = true;
+					PlaySound(content.reload);
+				}
 			}
 		}
 
@@ -420,6 +445,7 @@ private:
 	double lastTurnEndTime = 0;
 
 	float rifleAngle = 0;
+	bool reloaded = true;
 	double lastShotTime = 0;
 	std::list<Explosion> explosions;
 
@@ -524,6 +550,7 @@ int main() {
 	SetConfigFlags(FLAG_WINDOW_RESIZABLE);
 	SetTraceLogCallback(&traceLogCallback);
 	InitWindow(720, 720, "Diskiller");
+	InitAudioDevice();
 
 	auto load_settings = []() -> Settings
 	{
@@ -564,6 +591,7 @@ int main() {
 		}
 	}
 
+	CloseAudioDevice();
 	CloseWindow();
 
 	return 0;
