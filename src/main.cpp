@@ -50,7 +50,7 @@ struct Content {
 
 	Sound reload;
 	Sound shoot;
-	Sound menuMusic;
+	Music menuMusic;
 
 	Content() {
 		contentLog->info("Loading sprites");
@@ -65,7 +65,7 @@ struct Content {
 
 		reload = LoadSound("reload.mp3");
 		shoot = LoadSound("shoot.mp3");
-		menuMusic = LoadSound("menu_music.mp3");
+		menuMusic = LoadMusicStream("menu_music.mp3");
 	}
 
 	~Content() {
@@ -175,11 +175,11 @@ class SplashScreen : public UiScreen {
 public:
 	SplashScreen(const Settings& _settings, Content& _content) : settings(_settings), content(_content) {
 		gameSkeletonLog->info("Created SplashScreen");
-		PlaySound(content.menuMusic);
+		PlayMusicStream(content.menuMusic);
 	}
 
 	~SplashScreen() {
-		StopSound(content.menuMusic);
+		StopMusicStream(content.menuMusic);
 	}
 
 	std::optional<GameScreen*> update() override;
@@ -491,6 +491,8 @@ std::optional<GameScreen*> SplashScreen::update() {
 			break;
 		}
 	}
+
+	UpdateMusicStream(content.menuMusic);
 
 	return std::nullopt;
 }
