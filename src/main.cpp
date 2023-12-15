@@ -58,6 +58,15 @@ struct Settings {
 	float rifleShootDelay = 0.5f;
 };
 
+struct Savegame {
+	struct BestScore {
+		std::string mode;
+		int score;
+	};
+
+	std::vector<BestScore> scores;
+};
+
 void from_json(const nlohmann::json& json, Settings& settings) {
 	json.at("gravity").get_to(settings.gravity);
 	json.at("turnDelay").get_to(settings.turnDelay);
@@ -66,6 +75,24 @@ void from_json(const nlohmann::json& json, Settings& settings) {
 	json.at("rifleSpeed").get_to(settings.rifleSpeed);
 	json.at("rifleLength").get_to(settings.rifleLength);
 	json.at("rifleShootDelay").get_to(settings.rifleShootDelay);
+}
+
+void from_json(const nlohmann::json& json, Savegame::BestScore& best_score) {
+	json.at("mode").get_to(best_score.mode);
+	json.at("score").get_to(best_score.score);
+}
+
+void from_json(const nlohmann::json& json, Savegame& savegame) {
+	json.at("scores").get_to(savegame.scores);
+}
+
+void to_json(nlohmann::json& json, const Savegame::BestScore& best_score) {
+	json["mode"] = best_score.mode;
+	json["score"] = best_score.score;
+}
+
+void to_json(nlohmann::json& json, const Savegame& savegame) {
+	json["scores"] = savegame.scores;
 }
 
 struct Content {
@@ -118,6 +145,7 @@ enum class SessionType {
 };
 
 struct SessionDef {
+	std::string gameModeName;
 	SessionType type;
 	int turnCount;
 	int disksPerTurn;
@@ -140,24 +168,6 @@ namespace glm {
 	}
 }
 
-struct GameMode {
-	std::string name;
-	SessionDef sessionDef;
-
-	static const std::array<GameMode, 8> gameModes;
-};
-
-const std::array<GameMode, 8> GameMode::gameModes = {
-	GameMode { "Best of 10", SessionDef { SessionType::BestScore, 10, 1 } },
-	GameMode { "Best of 25", SessionDef { SessionType::BestScore, 25, 1 } },
-	GameMode { "Best of 100", SessionDef { SessionType::BestScore, 100, 1 } },
-	GameMode { "Survival", SessionDef { SessionType::Survival, 0, 1 } },
-	GameMode { "Expert Best of 10", SessionDef { SessionType::BestScore, 10, 3 } },
-	GameMode { "Expert Best of 25", SessionDef { SessionType::BestScore, 25, 3 } },
-	GameMode { "Expert Best of 100", SessionDef { SessionType::BestScore, 100, 3 } },
-	GameMode { "Expert Survival", SessionDef { SessionType::Survival, 0, 3 } },
-};
-
 class UiScreen : public GameScreen {
 protected:
 	Camera2D camera;
@@ -171,35 +181,28 @@ protected:
 	}
 };
 
-class RecordsScreen : public UiScreen {
-public:
-	RecordsScreen(const Settings& _settings, Content& _content) : settings(_settings), content(_content) {
-		gameSkeletonLog->info("Created Records screen");
-	}
-
-	std::optional<GameScreen*> update() override;
-
-	void render() override {
-		setCamera();
-
-		BeginMode2D(camera);
-		ClearBackground(Color{ content.map->getBackgroundColor().r, content.map->getBackgroundColor().g, content.map->getBackgroundColor().b, content.map->getBackgroundColor().a });
-		for (int i = 0; i < GameMode::gameModes.size(); ++i) {
-			DrawTextEx(content.font, GameMode::gameModes.at(i).name.c_str(), Vector2{ 1, float(4 + i) }, 1, 0, BLACK);
-			DrawTextEx(content.font, std::to_string(0).c_str(), Vector2{ 13, float(4 + i) }, 1, 0, BLACK);
-		}
-		EndMode2D();
-	}
-
-private:
-	const Settings& settings;
-	Content& content;
-};
-
 class SplashScreen : public UiScreen {
 public:
 	SplashScreen(const Settings& _settings, Content& _content) : settings(_settings), content(_content) {
 		gameSkeletonLog->info("Created SplashScreen");
+
+		{
+			const std::filesystem::path savefile = Platform::getSaveFolder() / "savegame.json";
+
+			logicLog->info("Checking savegame file {}", savefile);
+			if (!std::filesystem::exists(savefile)) {
+				logicLog->warn("Savegame doesn't exist");
+			}
+			else {
+				logicLog->info("Reading savegame");
+
+				std::ifstream stream(savefile);
+				nlohmann::json json;
+				stream >> json;
+				savegame = json;
+			}
+		}
+
 		PlayMusicStream(content.menuMusic);
 	}
 
@@ -214,21 +217,54 @@ public:
 
 		BeginMode2D(camera);
 		ClearBackground(Color{ content.map->getBackgroundColor().r, content.map->getBackgroundColor().g, content.map->getBackgroundColor().b, content.map->getBackgroundColor().a });
-		DrawTextEx(content.font, "Diskiller", Vector2{ 4,4 }, 2, 0, BLACK);
-		DrawTextEx(content.font, "Play", Vector2{ 3,8 }, 1, 0, BLACK);
-		DrawTextEx(content.font, fmt::format("Mode: {}", GameMode::gameModes.at(modeSelection).name).c_str(), Vector2{ 3,9 }, 1, 0, BLACK);
-		DrawTextEx(content.font, "Records", Vector2{ 3,10 }, 1, 0, BLACK);
-		DrawTextEx(content.font, "Credits", Vector2{ 3,11 }, 1, 0, BLACK);
-		DrawTextEx(content.font, "Exit", Vector2{ 3,12 }, 1, 0, BLACK);
-		DrawTextEx(content.font, ">", Vector2{ 2, float(8 + menuSelection) }, 1, 0, BLACK);
+		if (subscreen == Subscreen::MainMenu) {
+			DrawTextEx(content.font, "Diskiller", Vector2{ 4,4 }, 2, 0, BLACK);
+			DrawTextEx(content.font, "Play", Vector2{ 3,8 }, 1, 0, BLACK);
+			DrawTextEx(content.font, fmt::format("Mode: {}", gameModes.at(modeSelection).gameModeName).c_str(), Vector2{ 3,9 }, 1, 0, BLACK);
+			DrawTextEx(content.font, "Records", Vector2{ 3,10 }, 1, 0, BLACK);
+			DrawTextEx(content.font, "Exit", Vector2{ 3,11 }, 1, 0, BLACK);
+			DrawTextEx(content.font, ">", Vector2{ 2, float(8 + menuSelection) }, 1, 0, BLACK);
+		}
+		else if (subscreen == Subscreen::Records) {
+			for (int i = 0; i < gameModes.size(); ++i) {
+				int score = 0;
+				for (const auto& best_score : savegame.scores) {
+					if (best_score.mode == gameModes.at(i).gameModeName) {
+						score = best_score.score;
+					}
+				}
+
+				DrawTextEx(content.font, gameModes.at(i).gameModeName.c_str(), Vector2{ 1, float(4 + i) }, 1, 0, BLACK);
+				DrawTextEx(content.font, std::to_string(score).c_str(), Vector2{ 13, float(4 + i) }, 1, 0, BLACK);
+			}
+		}
 		EndMode2D();
 	}
 
 private:
+	enum class Subscreen {
+		MainMenu,
+		Records,
+	};
+
 	const Settings& settings;
 	Content& content;
+	Savegame savegame;
+
+	Subscreen subscreen = Subscreen::MainMenu;
 	int menuSelection = 0;
 	int modeSelection = 0;
+
+	const std::array<SessionDef, 8> gameModes = {
+	SessionDef { "Best of 10", SessionType::BestScore, 10, 1 },
+	SessionDef { "Best of 25", SessionType::BestScore, 25, 1 },
+	SessionDef { "Best of 100", SessionType::BestScore, 100, 1 },
+	SessionDef { "Survival", SessionType::Survival, 0, 1 },
+	SessionDef { "Expert Best of 10", SessionType::BestScore, 10, 3 },
+	SessionDef { "Expert Best of 25", SessionType::BestScore, 25, 3 },
+	SessionDef { "Expert Best of 100", SessionType::BestScore, 100, 3 },
+	SessionDef { "Expert Survival", SessionType::Survival, 0, 3 },
+	};
 };
 
 class Session : public GameScreen {
@@ -262,9 +298,11 @@ public:
 		if (disks.empty() && GetTime() - lastTurnEndTime >= settings.turnDelay) {
 
 			if (sessionDef.type == SessionType::BestScore && currentTurn == sessionDef.turnCount) {
+				saveBestScore(sessionDef.gameModeName, successfulTurns);
 				return new SplashScreen(settings, content);
 			}
 			else if (sessionDef.type == SessionType::Survival && failedTurns > 0) {
+				saveBestScore(sessionDef.gameModeName, successfulTurns);
 				return new SplashScreen(settings, content);
 			}
 			else {
@@ -485,47 +523,107 @@ private:
 
 		return result;
 	}
+
+	static void saveBestScore(const std::string& mode, const int score) {
+		Savegame savegame;
+
+		const std::filesystem::path savefile = Platform::getSaveFolder() / "savegame.json";
+
+		logicLog->info("Saving best score to {}", savefile);
+
+		if (!std::filesystem::exists(savefile.parent_path())) {
+			logicLog->warn("Savegame doesn't exist, creating");
+
+			std::filesystem::create_directories(savefile.parent_path());
+
+			std::ofstream stream(savefile);
+			nlohmann::json json = savegame;
+			stream << json;
+		}
+		else {
+			logicLog->info("Reading existing savegame");
+
+			std::ifstream stream(savefile);
+			nlohmann::json json;
+			stream >> json;
+			savegame = json;
+		}
+
+		bool present = false;
+		for (auto& best_score : savegame.scores) {
+			if (mode == best_score.mode) {
+				present = true;
+
+				if (score > best_score.score) {
+					logicLog->info("Updating best score for mode {}", mode);
+					best_score.score = score;
+				}
+				else {
+					logicLog->info("Existing score for mode {} is better", mode);
+				}
+
+				break;
+			}
+		}
+
+		if (!present) {
+			logicLog->info("Best score not present for mode {}, adding", mode);
+
+			Savegame::BestScore best_score;
+			best_score.mode = mode;
+			best_score.score = score;
+			savegame.scores.push_back(best_score);
+		}
+
+		{
+			logicLog->info("Saving savegame");
+
+			std::ofstream stream(savefile);
+			nlohmann::json json = savegame;
+			stream << json;
+		}
+	}
 };
 
 std::optional<GameScreen*> SplashScreen::update() {
-	if (IsKeyPressed(KEY_DOWN) || IsGamepadButtonPressed(0, Platform::GAMEPAD_DOWN)) {
-		menuSelection = std::clamp(menuSelection + 1, 0, 4);
+	if (subscreen == Subscreen::MainMenu) {
+		if (IsKeyPressed(KEY_DOWN) || IsGamepadButtonPressed(0, Platform::GAMEPAD_DOWN)) {
+			menuSelection = std::clamp(menuSelection + 1, 0, 4);
+		}
+
+		if (IsKeyPressed(KEY_UP) || IsGamepadButtonPressed(0, Platform::GAMEPAD_UP)) {
+			menuSelection = std::clamp(menuSelection - 1, 0, 4);
+		}
+
+		if (IsKeyPressed(KEY_ENTER) || IsGamepadButtonPressed(0, Platform::GAMEPAD_X)) {
+			switch (menuSelection)
+			{
+			case 0:
+				return new Session(settings, content, gameModes.at(modeSelection));
+
+			case 1:
+				modeSelection = (modeSelection + 1) % gameModes.size();
+				break;
+
+			case 2:
+				subscreen = Subscreen::Records;
+				break;
+
+			case 3:
+				exit(0);
+
+			default:
+				break;
+			}
+		}
 	}
-
-	if (IsKeyPressed(KEY_UP) || IsGamepadButtonPressed(0, Platform::GAMEPAD_UP)) {
-		menuSelection = std::clamp(menuSelection - 1, 0, 4);
-	}
-
-	if (IsKeyPressed(KEY_ENTER) || IsGamepadButtonPressed(0, Platform::GAMEPAD_X)) {
-		switch (menuSelection)
-		{
-		case 0:
-			return new Session(settings, content, GameMode::gameModes.at(modeSelection).sessionDef);
-
-		case 1:
-			modeSelection = (modeSelection + 1) % GameMode::gameModes.size();
-			break;
-
-		case 2:
-			return new RecordsScreen(settings, content);
-
-		case 4:
-			exit(0);
-
-		default:
-			break;
+	else if (subscreen == Subscreen::Records) {
+		if (IsKeyPressed(KEY_BACKSPACE) || IsGamepadButtonPressed(0, Platform::GAMEPAD_O)) {
+			subscreen = Subscreen::MainMenu;
 		}
 	}
 
 	UpdateMusicStream(content.menuMusic);
-
-	return std::nullopt;
-}
-
-std::optional<GameScreen*> RecordsScreen::update() {
-	if (IsKeyPressed(KEY_BACKSPACE) || IsGamepadButtonPressed(0, Platform::GAMEPAD_O)) {
-		return new SplashScreen(settings, content);
-	}
 
 	return std::nullopt;
 }
