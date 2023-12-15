@@ -6,20 +6,45 @@
 #include <glm/ext/scalar_constants.hpp>
 #include <list>
 
-enum {
-	GAMEPAD_UP = GAMEPAD_BUTTON_LEFT_FACE_UP,
-	GAMEPAD_RIGHT = GAMEPAD_BUTTON_LEFT_FACE_RIGHT,
-	GAMEPAD_DOWN = GAMEPAD_BUTTON_LEFT_FACE_DOWN,
-	GAMEPAD_LEFT = GAMEPAD_BUTTON_LEFT_FACE_LEFT,
-	GAMEPAD_X = GAMEPAD_BUTTON_RIGHT_FACE_DOWN,
-	GAMEPAD_O = GAMEPAD_BUTTON_RIGHT_FACE_RIGHT,
-};
-
 std::shared_ptr<spdlog::sinks::sink> consoleSink;
 std::shared_ptr<spdlog::logger> raylibLog;
 std::shared_ptr<spdlog::logger> contentLog;
 std::shared_ptr<spdlog::logger> logicLog;
 std::shared_ptr<spdlog::logger> gameSkeletonLog;
+
+#ifdef WIN32
+class Platform {
+public:
+	static std::filesystem::path getSaveFolder() {
+		return std::filesystem::path(std::getenv("APPDATA")) / "diskiller";
+	}
+
+	enum {
+		GAMEPAD_UP = GAMEPAD_BUTTON_LEFT_FACE_UP,
+		GAMEPAD_RIGHT = GAMEPAD_BUTTON_LEFT_FACE_RIGHT,
+		GAMEPAD_DOWN = GAMEPAD_BUTTON_LEFT_FACE_DOWN,
+		GAMEPAD_LEFT = GAMEPAD_BUTTON_LEFT_FACE_LEFT,
+		GAMEPAD_X = GAMEPAD_BUTTON_RIGHT_FACE_DOWN,
+		GAMEPAD_O = GAMEPAD_BUTTON_RIGHT_FACE_RIGHT,
+	};
+};
+#else
+class Platform {
+public:
+	static std::filesystem::path getSaveFolder() {
+		return std::filesystem::path(std::getenv("HOME")) / ".diskiller";
+	}
+
+	enum {
+		GAMEPAD_UP = 13,
+		GAMEPAD_RIGHT = 16,
+		GAMEPAD_DOWN = 14,
+		GAMEPAD_LEFT = 15,
+		GAMEPAD_X = 0,
+		GAMEPAD_O = 1,
+	};
+};
+#endif
 
 class SplashScreen;
 
@@ -230,7 +255,7 @@ public:
 	}
 
 	std::optional<GameScreen*> update() override {
-		if (IsKeyPressed(KEY_BACKSPACE) || IsGamepadButtonPressed(0, GAMEPAD_O)) {
+		if (IsKeyPressed(KEY_BACKSPACE) || IsGamepadButtonPressed(0, Platform::GAMEPAD_O)) {
 			return new SplashScreen(settings, content);
 		}
 
@@ -265,16 +290,16 @@ public:
 		bool projectile = false;
 
 		{
-			if (IsKeyDown(KEY_DOWN) || IsKeyDown(KEY_RIGHT) || IsGamepadButtonDown(0, GAMEPAD_DOWN) || IsGamepadButtonDown(0, GAMEPAD_RIGHT)) {
+			if (IsKeyDown(KEY_DOWN) || IsKeyDown(KEY_RIGHT) || IsGamepadButtonDown(0, Platform::GAMEPAD_DOWN) || IsGamepadButtonDown(0, Platform::GAMEPAD_RIGHT)) {
 				rifleAngle -= settings.rifleSpeed * GetFrameTime();
 			}
-			if (IsKeyDown(KEY_UP) || IsKeyDown(KEY_LEFT) || IsGamepadButtonDown(0, GAMEPAD_UP) || IsGamepadButtonDown(0, GAMEPAD_LEFT)) {
+			if (IsKeyDown(KEY_UP) || IsKeyDown(KEY_LEFT) || IsGamepadButtonDown(0, Platform::GAMEPAD_UP) || IsGamepadButtonDown(0, Platform::GAMEPAD_LEFT)) {
 				rifleAngle += settings.rifleSpeed * GetFrameTime();
 			}
 			rifleAngle = std::clamp<float>(rifleAngle, 0, glm::pi<float>() / 2);
 
 			if (reloaded) {
-				if (IsKeyPressed(KEY_SPACE) || IsGamepadButtonPressed(0, GAMEPAD_X)) {
+				if (IsKeyPressed(KEY_SPACE) || IsGamepadButtonPressed(0, Platform::GAMEPAD_X)) {
 					logicLog->info("Shooting");
 					projectile = true;
 					reloaded = false;
@@ -463,15 +488,15 @@ private:
 };
 
 std::optional<GameScreen*> SplashScreen::update() {
-	if (IsKeyPressed(KEY_DOWN) || IsGamepadButtonPressed(0, GAMEPAD_DOWN)) {
+	if (IsKeyPressed(KEY_DOWN) || IsGamepadButtonPressed(0, Platform::GAMEPAD_DOWN)) {
 		menuSelection = std::clamp(menuSelection + 1, 0, 4);
 	}
 
-	if (IsKeyPressed(KEY_UP) || IsGamepadButtonPressed(0, GAMEPAD_UP)) {
+	if (IsKeyPressed(KEY_UP) || IsGamepadButtonPressed(0, Platform::GAMEPAD_UP)) {
 		menuSelection = std::clamp(menuSelection - 1, 0, 4);
 	}
 
-	if (IsKeyPressed(KEY_ENTER) || IsGamepadButtonPressed(0, GAMEPAD_X)) {
+	if (IsKeyPressed(KEY_ENTER) || IsGamepadButtonPressed(0, Platform::GAMEPAD_X)) {
 		switch (menuSelection)
 		{
 		case 0:
@@ -498,7 +523,7 @@ std::optional<GameScreen*> SplashScreen::update() {
 }
 
 std::optional<GameScreen*> RecordsScreen::update() {
-	if (IsKeyPressed(KEY_BACKSPACE) || IsGamepadButtonPressed(0, GAMEPAD_O)) {
+	if (IsKeyPressed(KEY_BACKSPACE) || IsGamepadButtonPressed(0, Platform::GAMEPAD_O)) {
 		return new SplashScreen(settings, content);
 	}
 
