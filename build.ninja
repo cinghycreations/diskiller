@@ -1,5 +1,4 @@
 game = diskiller
-version = 0.1
 
 rule cmake-gen
   command = cmake -S . -B $binarydir $flags
@@ -47,26 +46,26 @@ build temp/build/raspberrypi32/$game: wsl-cmake-build temp/build/raspberrypi32/b
 build temp/build/raspberrypi64/$game: wsl-cmake-build temp/build/raspberrypi64/build.ninja
   binarydir = temp/build/raspberrypi64
 
-build temp/build/diskiller_windows_$version.zip: archive temp/build/windows/Release/$game.exe
+build temp/build/diskiller_windows.zip: archive temp/build/windows/Release/$game.exe
   exefolder = temp/build/windows/Release
   executable = $game.exe
 
-build temp/build/diskiller_linux_$version.zip: archive temp/build/linux/$game
+build temp/build/diskiller_linux.zip: archive temp/build/linux/$game
   exefolder = temp/build/linux
   executable = $game
 
-build temp/build/diskiller_raspberrypi32_$version.zip: archive temp/build/raspberrypi32/$game
+build temp/build/diskiller_raspberrypi32.zip: archive temp/build/raspberrypi32/$game
   exefolder = temp/build/raspberrypi32
   executable = $game
 
-build temp/build/diskiller_raspberrypi64_$version.zip: archive temp/build/raspberrypi64/$game
+build temp/build/diskiller_raspberrypi64.zip: archive temp/build/raspberrypi64/$game
   exefolder = temp/build/raspberrypi64
   executable = $game
 
 build executables: phony temp/build/windows/Release/$game.exe temp/build/linux/$game temp/build/raspberrypi32/$game temp/build/raspberrypi64/$game
-build windows: phony temp/build/diskiller_windows_$version.zip
-build linux: phony temp/build/diskiller_linux_$version.zip
-build raspberrypi32: phony temp/build/diskiller_raspberrypi32_$version.zip
-build raspberrypi64: phony temp/build/diskiller_raspberrypi64_$version.zip
-build packages: phony windows linux raspberrypi32 raspberrypi64
-default packages
+build packages: phony temp/build/diskiller_windows.zip temp/build/diskiller_linux.zip temp/build/diskiller_raspberrypi32.zip temp/build/diskiller_raspberrypi64.zip
+build windows: phony temp/build/windows/Release/$game.exe
+build linux: phony temp/build/linux/$game
+build raspberrypi32: phony temp/build/raspberrypi32/$game
+build raspberrypi64: phony temp/build/raspberrypi64/$game
+default executables
