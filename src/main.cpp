@@ -2,11 +2,13 @@
 #include <tileson.h>
 #include <spdlog/spdlog.h>
 #include <spdlog/sinks/stdout_color_sinks.h>
+#include <spdlog/sinks/basic_file_sink.h>
 #include <spdlog/fmt/ostr.h>
 #include <glm/ext/scalar_constants.hpp>
 #include <list>
 
 std::shared_ptr<spdlog::sinks::sink> consoleSink;
+std::shared_ptr<spdlog::sinks::sink> fileSink;
 std::shared_ptr<spdlog::logger> raylibLog;
 std::shared_ptr<spdlog::logger> contentLog;
 std::shared_ptr<spdlog::logger> logicLog;
@@ -531,10 +533,8 @@ private:
 
 		logicLog->info("Saving best score to {}", savefile);
 
-		if (!std::filesystem::exists(savefile.parent_path())) {
+		if (!std::filesystem::exists(savefile)) {
 			logicLog->warn("Savegame doesn't exist, creating");
-
-			std::filesystem::create_directories(savefile.parent_path());
 
 			std::ofstream stream(savefile);
 			nlohmann::json json = savegame;
@@ -664,13 +664,20 @@ static void traceLogCallback(int logLevel, const char* text, va_list args) {
 }
 
 int main() {
+	const std::filesystem::path save_folder = Platform::getSaveFolder();
+	if (!std::filesystem::exists(save_folder)) {
+		std::filesystem::create_directories(save_folder);
+	}
+
 	consoleSink.reset(new spdlog::sinks::stdout_color_sink_st);
-	raylibLog.reset(new spdlog::logger("raylib", consoleSink));
-	contentLog.reset(new spdlog::logger("content", consoleSink));
-	logicLog.reset(new spdlog::logger("logic", consoleSink));
-	gameSkeletonLog.reset(new spdlog::logger("gameSkeleton", consoleSink));
+	fileSink.reset(new spdlog::sinks::basic_file_sink_st((save_folder / "log.txt").string(), true));
+	raylibLog.reset(new spdlog::logger("raylib", { consoleSink, fileSink }));
+	contentLog.reset(new spdlog::logger("content", { consoleSink, fileSink }));
+	logicLog.reset(new spdlog::logger("logic", { consoleSink, fileSink }));
+	gameSkeletonLog.reset(new spdlog::logger("gameSkeleton", { consoleSink, fileSink }));
 
 	raylibLog->set_level(spdlog::level::warn);
+	logicLog->set_level(spdlog::level::debug);
 
 	SetConfigFlags(FLAG_WINDOW_RESIZABLE);
 	SetTraceLogCallback(&traceLogCallback);
