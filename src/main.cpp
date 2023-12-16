@@ -308,6 +308,8 @@ public:
 				return new SplashScreen(settings, content);
 			}
 			else {
+				logicLog->info("Creating disks for turn {}", currentTurn + 1);
+
 				for (int i = 0; i < sessionDef.disksPerTurn; ++i) {
 					Disk disk;
 					disk.velocity.x = randomFloat(-3, 3);
