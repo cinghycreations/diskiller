@@ -638,11 +638,11 @@ private:
 std::optional<GameScreen*> SplashScreen::update() {
 	if (subscreen == Subscreen::MainMenu) {
 		if (IsKeyPressed(KEY_DOWN) || IsGamepadButtonPressed(0, Platform::GAMEPAD_DOWN)) {
-			menuSelection = std::clamp(menuSelection + 1, 0, 4);
+			menuSelection = std::clamp(menuSelection + 1, 0, 3);
 		}
 
 		if (IsKeyPressed(KEY_UP) || IsGamepadButtonPressed(0, Platform::GAMEPAD_UP)) {
-			menuSelection = std::clamp(menuSelection - 1, 0, 4);
+			menuSelection = std::clamp(menuSelection - 1, 0, 3);
 		}
 
 		if (IsKeyPressed(KEY_ENTER) || IsGamepadButtonPressed(0, Platform::GAMEPAD_X)) {
