@@ -1,5 +1,5 @@
 game = diskiller
-version = 0.2.3
+version = 0.1
 
 rule cmake-gen
   command = cmake -S . -B $binarydir $flags
