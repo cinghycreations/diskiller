@@ -58,6 +58,8 @@ struct Settings {
 	float rifleSpeed = 1.0f;
 	float rifleLength = 1.5f;
 	float rifleShootDelay = 0.5f;
+	int rifleLookBackFrames = 2;
+	int rifleLookForwardFrames = 2;
 };
 
 struct Savegame {
@@ -77,6 +79,8 @@ void from_json(const nlohmann::json& json, Settings& settings) {
 	json.at("rifleSpeed").get_to(settings.rifleSpeed);
 	json.at("rifleLength").get_to(settings.rifleLength);
 	json.at("rifleShootDelay").get_to(settings.rifleShootDelay);
+	json.at("rifleLookBackFrames").get_to(settings.rifleLookBackFrames);
+	json.at("rifleLookForwardFrames").get_to(settings.rifleLookForwardFrames);
 }
 
 void from_json(const nlohmann::json& json, Savegame::BestScore& best_score) {
@@ -329,8 +333,6 @@ public:
 			}
 		}
 
-		bool projectile = false;
-
 		{
 			if (IsKeyDown(KEY_DOWN) || IsKeyDown(KEY_RIGHT) || IsGamepadButtonDown(0, Platform::GAMEPAD_DOWN) || IsGamepadButtonDown(0, Platform::GAMEPAD_RIGHT)) {
 				rifleAngle -= settings.rifleSpeed * GetFrameTime();
@@ -343,7 +345,7 @@ public:
 			if (reloaded) {
 				if (IsKeyPressed(KEY_SPACE) || IsGamepadButtonPressed(0, Platform::GAMEPAD_X)) {
 					logicLog->info("Shooting");
-					projectile = true;
+					shootFrames = settings.rifleLookForwardFrames;
 					reloaded = false;
 					lastShotTime = GetTime();
 					PlaySound(content.shoot);
@@ -358,6 +360,9 @@ public:
 			}
 		}
 
+		bool projectile = shootFrames > 0;
+		--shootFrames;
+
 		{
 			const glm::vec2 rifle_start(0.5f, 13.5f);
 			const glm::vec2 rifle_end = rifle_start + glm::vec2(std::cos(rifleAngle), -std::sin(rifleAngle)) * 20.0f;
@@ -366,7 +371,19 @@ public:
 				iter->position += iter->velocity * GetFrameTime();
 				iter->velocity += glm::vec2(0, settings.gravity) * GetFrameTime();
 
-				if (projectile && collideLineCircle(iter->position, settings.diskColliderSize, rifle_start, rifle_end)) {
+				iter->lookbackPositions.push_back(iter->position);
+				while (iter->lookbackPositions.size() > settings.rifleLookBackFrames) {
+					iter->lookbackPositions.pop_front();
+				}
+
+				bool hit = false;
+				if (projectile) {
+					for (const glm::vec2 lookback_position : iter->lookbackPositions) {
+						hit = hit || collideLineCircle(lookback_position, settings.diskColliderSize, rifle_start, rifle_end);
+					}
+				}
+
+				if (hit) {
 					logicLog->info("Disk hit");
 
 					projectile = false;
@@ -486,6 +503,7 @@ private:
 	{
 		glm::vec2 position;
 		glm::vec2 velocity;
+		std::list<glm::vec2> lookbackPositions;
 	};
 
 	struct Explosion
@@ -514,6 +532,7 @@ private:
 	float rifleAngle = 0;
 	bool reloaded = true;
 	double lastShotTime = 0;
+	int shootFrames = 0;
 	std::list<Explosion> explosions;
 
 	static bool collideLineCircle(const glm::vec2& circle_center, const float circle_radius, const glm::vec2& line_start, const glm::vec2& line_end) {

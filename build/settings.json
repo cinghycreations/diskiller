@@ -5,5 +5,7 @@
   "diskColliderDebugDraw": false,
   "rifleSpeed": 1.0,
   "rifleLength": 1.5,
-  "rifleShootDelay": 0.75
+  "rifleShootDelay": 0.75,
+  "rifleLookBackFrames": 2,
+  "rifleLookForwardFrames" : 2
 }
