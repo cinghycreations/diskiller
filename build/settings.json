@@ -1,11 +1,11 @@
 {
   "gravity": 9.81,
   "turnDelay": 1.0,
-  "diskColliderSize": 0.8,
   "diskColliderDebugDraw": false,
+  "diskColliderSize": 0.8,
+  "rifleDebugDraw": false,
   "rifleSpeed": 1.0,
-  "rifleLength": 1.5,
   "rifleShootDelay": 0.75,
   "rifleLookBackFrames": 2,
-  "rifleLookForwardFrames" : 2
+  "rifleLookForwardFrames": 2
 }

@@ -53,10 +53,10 @@ class SplashScreen;
 struct Settings {
 	float gravity = 9.81;
 	float turnDelay = 1.0f;
-	float diskColliderSize = 0.40f;
 	bool diskColliderDebugDraw = false;
+	float diskColliderSize = 0.40f;
+	bool rifleDebugDraw = false;
 	float rifleSpeed = 1.0f;
-	float rifleLength = 1.5f;
 	float rifleShootDelay = 0.5f;
 	int rifleLookBackFrames = 2;
 	int rifleLookForwardFrames = 2;
@@ -74,10 +74,10 @@ struct Savegame {
 void from_json(const nlohmann::json& json, Settings& settings) {
 	json.at("gravity").get_to(settings.gravity);
 	json.at("turnDelay").get_to(settings.turnDelay);
-	json.at("diskColliderSize").get_to(settings.diskColliderSize);
 	json.at("diskColliderDebugDraw").get_to(settings.diskColliderDebugDraw);
+	json.at("diskColliderSize").get_to(settings.diskColliderSize);
+	json.at("rifleDebugDraw").get_to(settings.rifleDebugDraw);
 	json.at("rifleSpeed").get_to(settings.rifleSpeed);
-	json.at("rifleLength").get_to(settings.rifleLength);
 	json.at("rifleShootDelay").get_to(settings.rifleShootDelay);
 	json.at("rifleLookBackFrames").get_to(settings.rifleLookBackFrames);
 	json.at("rifleLookForwardFrames").get_to(settings.rifleLookForwardFrames);
@@ -294,6 +294,7 @@ public:
 
 		diskTile = find_tile("disk");
 		explosionTile = find_tile("explosion");
+		rifleTile = find_tile("rifle");
 	}
 
 	std::optional<GameScreen*> update() override {
@@ -453,6 +454,7 @@ public:
 		ClearBackground(Color{ content.map->getBackgroundColor().r, content.map->getBackgroundColor().g, content.map->getBackgroundColor().b, content.map->getBackgroundColor().a });
 		BeginMode2D(camera);
 
+		// Background
 		for (tson::Layer& layer : content.map->getLayers()) {
 			if (layer.getType() == tson::LayerType::TileLayer && layer.get<bool>("static")) {
 				for (int i = 0; i < layer.getSize().x; ++i) {
@@ -466,24 +468,50 @@ public:
 				}
 			}
 		}
+
+		// Disks
 		for (const Disk& disk : disks) {
 			draw_tile(diskTile, disk.position - glm::vec2(0.5f));
 			if (settings.diskColliderDebugDraw) {
 				DrawCircleV(Vector2{ disk.position.x, disk.position.y }, settings.diskColliderSize, Color{ 255,0,0,192 });
 			}
 		}
+
+		// Explosions
 		for (const Explosion& explosion : explosions) {
 			const uint32_t tile_id = explosion.animation.getCurrentTileId();
 			const tson::Tile* explosion_frame = content.map->getTileMap().at(tile_id);
 			draw_tile(explosion_frame, explosion.position - glm::vec2(0.5f));
 		}
 
+		// Rifle
 		{
-			const glm::vec2 rifle_start(0.5f, 13.5f);
-			const glm::vec2 rifle_end = rifle_start + glm::vec2(std::cos(rifleAngle), -std::sin(rifleAngle)) * settings.rifleLength;
-			DrawLineEx(Vector2{ rifle_start.x, rifle_start.y }, Vector2{ rifle_end.x, rifle_end.y }, 0.1f, YELLOW);
+			const glm::vec2 rifle_position(0.5f, 13.5f);
+
+			{
+				const int rifle_width = rifleTile->get<int>("width");
+				const int rifle_height = rifleTile->get<int>("height");
+
+				Rectangle draw_rect;
+				draw_rect.x = rifleTile->getDrawingRect().x / (float(rifleTile->getDrawingRect().width) / float(rifleTile->getTileset()->getTileSize().x));
+				draw_rect.y = rifleTile->getDrawingRect().y / (float(rifleTile->getDrawingRect().height) / float(rifleTile->getTileset()->getTileSize().y));
+				draw_rect.width = rifleTile->getTileset()->getTileSize().x * rifle_width;
+				draw_rect.height = rifleTile->getTileset()->getTileSize().y * rifle_height;
+
+				const Rectangle dest{ rifle_position.x, rifle_position.y, float(rifle_width), float(rifle_height) };
+				const Vector2 origin{ 0.5f / rifle_width, 0.5f / rifle_height };
+				const float rotation = glm::degrees(-rifleAngle);
+				DrawTexturePro(content.sprites, draw_rect, dest, origin, rotation, WHITE);
+			}
+
+			if (settings.rifleDebugDraw)
+			{
+				const glm::vec2 rifle_end = rifle_position + glm::vec2(std::cos(rifleAngle), -std::sin(rifleAngle)) * 30.0f;
+				DrawLineEx(Vector2{ rifle_position.x, rifle_position.y }, Vector2{ rifle_end.x, rifle_end.y }, 0.1f, YELLOW);
+			}
 		}
 
+		// UI
 		{
 			std::string score;
 			if (sessionDef.type == SessionType::BestScore) {
@@ -516,6 +544,7 @@ private:
 
 	tson::Tile* diskTile = nullptr;
 	tson::Tile* explosionTile = nullptr;
+	tson::Tile* rifleTile = nullptr;
 
 	const Settings& settings;
 	Content& content;

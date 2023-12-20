@@ -220,6 +220,21 @@
                         }],
                  "id":35,
                  "type":"explosion"
+                }, 
+                {
+                 "id":46,
+                 "properties":[
+                        {
+                         "name":"height",
+                         "type":"int",
+                         "value":1
+                        }, 
+                        {
+                         "name":"width",
+                         "type":"int",
+                         "value":2
+                        }],
+                 "type":"rifle"
                 }],
          "tilewidth":16
         }],
