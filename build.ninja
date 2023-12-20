@@ -1,6 +1,3 @@
-game = diskiller
-version = 0.1
-
 rule cmake-gen
   command = cmake -S . -B $binarydir $flags
   pool = console
@@ -25,41 +22,41 @@ rule wsl-cmake-package
   command = wsl cmake --build $binarydir --config Release --target package
   pool = console
 
-build temp/build/windows/$game.sln: cmake-gen
+build temp/build/windows/diskiller.sln: cmake-gen
   binarydir = temp/build/windows
-  flags = -D CPACK_GENERATOR=ZIP -D CPACK_PACKAGE_VERSION=$version -D CPACK_SYSTEM_NAME=windows
+  flags = -D CPACK_GENERATOR=ZIP -D CPACK_PACKAGE_VERSION=0.1 -D CPACK_SYSTEM_NAME=windows
 
 build temp/build/linux/build.ninja: wsl-cmake-gen
   binarydir = temp/build/linux
-  flags = -G Ninja -D CMAKE_BUILD_TYPE=Release -D CPACK_GENERATOR=TGZ -D CPACK_PACKAGE_VERSION=$version -D CPACK_SYSTEM_NAME=linux
+  flags = -G Ninja -D CMAKE_BUILD_TYPE=Release -D CPACK_GENERATOR=TGZ -D CPACK_PACKAGE_VERSION=0.1 -D CPACK_SYSTEM_NAME=linux
 
 build temp/build/raspberrypi/build.ninja: wsl-cmake-gen
   binarydir = temp/build/raspberrypi
-  flags = -G Ninja -D CMAKE_C_COMPILER=aarch64-linux-gnu-gcc -D CMAKE_CXX_COMPILER=aarch64-linux-gnu-g++ -D PLATFORM=DRM -D CMAKE_BUILD_TYPE=Release -D CPACK_GENERATOR=TGZ -D CPACK_PACKAGE_VERSION=$version -D CPACK_SYSTEM_NAME=raspberrypi
+  flags = -G Ninja -D CMAKE_C_COMPILER=aarch64-linux-gnu-gcc -D CMAKE_CXX_COMPILER=aarch64-linux-gnu-g++ -D PLATFORM=DRM -D CMAKE_BUILD_TYPE=Release -D CPACK_GENERATOR=TGZ -D CPACK_PACKAGE_VERSION=0.1 -D CPACK_SYSTEM_NAME=raspberrypi
 
-build temp/build/windows/Release/$game.exe: cmake-build temp/build/windows/$game.sln
+build temp/build/windows/Release/diskiller.exe: cmake-build temp/build/windows/diskiller.sln
   binarydir = temp/build/windows
 
-build temp/build/linux/$game: wsl-cmake-build temp/build/linux/build.ninja
+build temp/build/linux/diskiller: wsl-cmake-build temp/build/linux/build.ninja
   binarydir = temp/build/linux
 
-build temp/build/raspberrypi/$game: wsl-cmake-build temp/build/raspberrypi/build.ninja
+build temp/build/raspberrypi/diskiller: wsl-cmake-build temp/build/raspberrypi/build.ninja
   binarydir = temp/build/raspberrypi
 
-build executables: phony temp/build/windows/Release/$game.exe temp/build/linux/$game temp/build/raspberrypi/$game
-build windows: phony temp/build/windows/Release/$game.exe
-build linux: phony temp/build/linux/$game
-build raspberrypi: phony temp/build/raspberrypi/$game
+build executables: phony temp/build/windows/Release/diskiller.exe temp/build/linux/diskiller temp/build/raspberrypi/diskiller
+build windows: phony temp/build/windows/Release/diskiller.exe
+build linux: phony temp/build/linux/diskiller
+build raspberrypi: phony temp/build/raspberrypi/diskiller
 
-build temp/build/windows/$game-$version-windows.zip: cmake-package temp/build/windows/$game.sln
+build temp/build/windows/diskiller-0.1-windows.zip: cmake-package temp/build/windows/diskiller.sln
   binarydir = temp/build/windows
 
-build temp/build/linux/$game-$version-linux.tar.gz: wsl-cmake-package temp/build/linux/build.ninja
+build temp/build/linux/diskiller-0.1-linux.tar.gz: wsl-cmake-package temp/build/linux/build.ninja
   binarydir = temp/build/linux
 
-build temp/build/raspberrypi/$game-$version-raspberrypi.tar.gz: wsl-cmake-package temp/build/raspberrypi/build.ninja
+build temp/build/raspberrypi/diskiller-0.1-raspberrypi.tar.gz: wsl-cmake-package temp/build/raspberrypi/build.ninja
   binarydir = temp/build/raspberrypi
   
-build packages: phony temp/build/windows/$game-$version-windows.zip temp/build/linux/$game-$version-linux.tar.gz temp/build/raspberrypi/$game-$version-raspberrypi.tar.gz
+build packages: phony temp/build/windows/diskiller-0.1-windows.zip temp/build/linux/diskiller-0.1-linux.tar.gz temp/build/raspberrypi/diskiller-0.1-raspberrypi.tar.gz
 
 default executables
