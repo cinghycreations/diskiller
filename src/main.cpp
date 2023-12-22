@@ -3,6 +3,7 @@
 #include <spdlog/spdlog.h>
 #include <spdlog/sinks/stdout_color_sinks.h>
 #include <spdlog/sinks/basic_file_sink.h>
+#include <spdlog/pattern_formatter.h>
 #include <spdlog/fmt/ostr.h>
 #include <glm/ext/scalar_constants.hpp>
 #include <list>
@@ -11,9 +12,8 @@
 DEFINE_uint32(seed, 0, "Set random seed");
 DEFINE_string(record_automation, "", "Record and save an automation list");
 DEFINE_string(play_automation, "", "Play an automation list");
+DEFINE_string(check_log, "", "Check that the specified string is contained in the log");
 
-std::shared_ptr<spdlog::sinks::sink> consoleSink;
-std::shared_ptr<spdlog::sinks::sink> fileSink;
 std::shared_ptr<spdlog::logger> raylibLog;
 std::shared_ptr<spdlog::logger> contentLog;
 std::shared_ptr<spdlog::logger> logicLog;
@@ -310,10 +310,12 @@ public:
 		if (disks.empty() && GetTime() - lastTurnEndTime >= settings.turnDelay) {
 
 			if (sessionDef.type == SessionType::BestScore && currentTurn == sessionDef.turnCount) {
+				logicLog->info("Finished session with best score {}", successfulTurns);
 				saveBestScore(sessionDef.gameModeName, successfulTurns);
 				return new SplashScreen(settings, content);
 			}
 			else if (sessionDef.type == SessionType::Survival && failedTurns > 0) {
+				logicLog->info("Finished session with best score {}", successfulTurns);
 				saveBestScore(sessionDef.gameModeName, successfulTurns);
 				return new SplashScreen(settings, content);
 			}
@@ -769,6 +771,33 @@ private:
 	int automation_frame = 0;
 };
 
+struct LogChecker : public spdlog::sinks::sink {
+	std::unique_ptr<spdlog::formatter> formatter;
+	const std::string stringToCheck;
+	bool result = false;
+
+	LogChecker(const std::string& string_to_check) : stringToCheck(string_to_check), formatter(new spdlog::pattern_formatter) {
+	}
+
+	void log(const spdlog::details::log_msg& msg) {
+		spdlog::memory_buf_t formatted;
+		formatter->format(msg, formatted);
+
+		const bool found = std::search(formatted.begin(), formatted.end(), stringToCheck.begin(), stringToCheck.end()) != formatted.end();
+		result = result || found;
+	}
+
+	void flush() override {}
+
+	void set_pattern(const std::string& pattern) override {
+		formatter.reset(new spdlog::pattern_formatter(pattern));
+	}
+
+	void set_formatter(std::unique_ptr<spdlog::formatter> sink_formatter) override {
+		formatter = std::move(sink_formatter);
+	}
+};
+
 int main(int argc, char* argv[]) {
 	gflags::ParseCommandLineFlags(&argc, &argv, false);
 
@@ -777,12 +806,19 @@ int main(int argc, char* argv[]) {
 		std::filesystem::create_directories(save_folder);
 	}
 
-	consoleSink.reset(new spdlog::sinks::stdout_color_sink_st);
-	fileSink.reset(new spdlog::sinks::basic_file_sink_st((save_folder / "log.txt").string(), true));
-	raylibLog.reset(new spdlog::logger("raylib", { consoleSink, fileSink }));
-	contentLog.reset(new spdlog::logger("content", { consoleSink, fileSink }));
-	logicLog.reset(new spdlog::logger("logic", { consoleSink, fileSink }));
-	gameSkeletonLog.reset(new spdlog::logger("gameSkeleton", { consoleSink, fileSink }));
+	LogChecker* log_checker = nullptr;
+	std::vector<spdlog::sink_ptr> sinks;
+	sinks.emplace_back(new spdlog::sinks::stdout_color_sink_st);
+	sinks.emplace_back(new spdlog::sinks::basic_file_sink_st((save_folder / "log.txt").string(), true));
+	if (!FLAGS_check_log.empty()) {
+		log_checker = new LogChecker(FLAGS_check_log);
+		sinks.emplace_back(log_checker);
+	}
+
+	raylibLog.reset(new spdlog::logger("raylib", sinks.begin(), sinks.end()));
+	contentLog.reset(new spdlog::logger("content", sinks.begin(), sinks.end()));
+	logicLog.reset(new spdlog::logger("logic", sinks.begin(), sinks.end()));
+	gameSkeletonLog.reset(new spdlog::logger("gameSkeleton", sinks.begin(), sinks.end()));
 
 	raylibLog->set_level(spdlog::level::warn);
 	logicLog->set_level(spdlog::level::debug);
@@ -846,6 +882,10 @@ int main(int argc, char* argv[]) {
 
 	CloseAudioDevice();
 	CloseWindow();
+
+	if (log_checker) {
+		return log_checker->result ? 0 : 1;
+	}
 
 	return 0;
 }

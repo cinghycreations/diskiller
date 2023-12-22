@@ -21,5 +21,5 @@ install( DIRECTORY "${CMAKE_SOURCE_DIR}/build/" DESTINATION "." )
 include( CPack )
 
 enable_testing()
-add_test( NAME quit COMMAND diskiller -seed=349843924 -play_automation=../test/quit.txt WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}/build" )
-add_test( NAME play_simple COMMAND diskiller -seed=349843924 -play_automation=../test/play_simple.txt WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}/build" )
+add_test( NAME quit COMMAND diskiller -seed=349843924 -play_automation=../test/quit.txt "-check_log=Quit detected" WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}/build" )
+add_test( NAME play_simple COMMAND diskiller -seed=349843924 -play_automation=../test/play_simple.txt "-check_log=Finished session with best score 10" WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}/build" )
