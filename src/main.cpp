@@ -217,6 +217,11 @@ public:
 		PlayMusicStream(content.menuMusic);
 	}
 
+	SplashScreen(const Settings& _settings, Content& _content, const int your_score) : SplashScreen(_settings, _content) {
+		yourScore = your_score;
+		subscreen = Subscreen::YourScore;
+	}
+
 	~SplashScreen() {
 		StopMusicStream(content.menuMusic);
 	}
@@ -249,6 +254,9 @@ public:
 				DrawTextEx(content.font, std::to_string(score).c_str(), Vector2{ 13, float(4 + i) }, 1, 0, BLACK);
 			}
 		}
+		else if (subscreen == Subscreen::YourScore) {
+			DrawTextEx(content.font, fmt::format("Your score is {}", yourScore).c_str(), Vector2{ 4, 5 }, 1, 0, BLACK);
+		}
 		EndMode2D();
 	}
 
@@ -256,6 +264,7 @@ private:
 	enum class Subscreen {
 		MainMenu,
 		Records,
+		YourScore,
 	};
 
 	const Settings& settings;
@@ -265,6 +274,7 @@ private:
 	Subscreen subscreen = Subscreen::MainMenu;
 	int menuSelection = 0;
 	int modeSelection = 0;
+	int yourScore = 0;
 
 	const std::array<SessionDef, 8> gameModes = {
 	SessionDef { "Best of 10", SessionType::BestScore, 10, 1 },
@@ -312,12 +322,12 @@ public:
 			if (sessionDef.type == SessionType::BestScore && currentTurn == sessionDef.turnCount) {
 				logicLog->info("Finished session with best score {}", successfulTurns);
 				saveBestScore(sessionDef.gameModeName, successfulTurns);
-				return new SplashScreen(settings, content);
+				return new SplashScreen(settings, content, successfulTurns);
 			}
 			else if (sessionDef.type == SessionType::Survival && failedTurns > 0) {
 				logicLog->info("Finished session with best score {}", successfulTurns);
 				saveBestScore(sessionDef.gameModeName, successfulTurns);
-				return new SplashScreen(settings, content);
+				return new SplashScreen(settings, content, successfulTurns);
 			}
 			else {
 				logicLog->info("Creating disks for turn {}", currentTurn + 1);
@@ -674,7 +684,7 @@ std::optional<GameScreen*> SplashScreen::update() {
 			}
 		}
 	}
-	else if (subscreen == Subscreen::Records) {
+	else if (subscreen == Subscreen::Records || subscreen == Subscreen::YourScore) {
 		if (IsKeyPressed(KEY_BACKSPACE) || IsGamepadButtonPressed(0, Platform::GAMEPAD_O)) {
 			subscreen = Subscreen::MainMenu;
 		}
