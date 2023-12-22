@@ -318,7 +318,7 @@ public:
 			return new SplashScreen(settings, content);
 		}
 
-		if (disks.empty() && GetTime() - lastTurnEndTime >= settings.turnDelay) {
+		if (disks.empty() && GetTime() - lastDiskRemovedTime >= settings.turnDelay) {
 
 			if (sessionDef.type == SessionType::BestScore && currentTurn == sessionDef.turnCount) {
 				logicLog->info("Finished session with best score {}", successfulTurns);
@@ -349,6 +349,8 @@ public:
 				}
 
 				++currentTurn;
+				hitDisks = 0;
+				missedDisks = 0;
 			}
 		}
 
@@ -385,6 +387,7 @@ public:
 		{
 			const glm::vec2 rifle_start(0.5f, 13.5f);
 			const glm::vec2 rifle_end = rifle_start + glm::vec2(std::cos(rifleAngle), -std::sin(rifleAngle)) * 20.0f;
+			int prev_disk_count = disks.size();
 
 			for (auto iter = disks.begin(); iter != disks.end();) {
 				iter->position += iter->velocity * GetFrameTime();
@@ -419,24 +422,28 @@ public:
 
 					explosions.push_back(explosion);
 
+					++hitDisks;
 					iter = disks.erase(iter);
-					if (disks.empty()) {
-						++successfulTurns;
-						lastTurnEndTime = GetTime();
-					}
 				}
 				else if (iter->position.y > 16) {
 					logicLog->info("Disk missed");
 
+					++missedDisks;
 					iter = disks.erase(iter);
-					if (disks.empty()) {
-						++failedTurns;
-						lastTurnEndTime = GetTime();
-					}
 				}
 				else {
 					++iter;
 				}
+			}
+
+			if (prev_disk_count > 0 && disks.empty()) {
+				if (missedDisks > 0) {
+					++failedTurns;
+				}
+				else {
+					++successfulTurns;
+				}
+				lastDiskRemovedTime = GetTime();
 			}
 		}
 
@@ -572,9 +579,11 @@ private:
 
 	std::list<Disk> disks;
 	int currentTurn = 0;
+	int hitDisks = 0;
+	int missedDisks = 0;
 	int successfulTurns = 0;
 	int failedTurns = 0;
-	double lastTurnEndTime = 0;
+	double lastDiskRemovedTime = 0;
 
 	float rifleAngle = 0;
 	bool reloaded = true;
