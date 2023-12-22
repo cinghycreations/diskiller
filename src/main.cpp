@@ -6,6 +6,9 @@
 #include <spdlog/fmt/ostr.h>
 #include <glm/ext/scalar_constants.hpp>
 #include <list>
+#include <gflags/gflags.h>
+
+DEFINE_uint32(seed, 1, "Set random seed");
 
 std::shared_ptr<spdlog::sinks::sink> consoleSink;
 std::shared_ptr<spdlog::sinks::sink> fileSink;
@@ -733,6 +736,8 @@ int main() {
 	SetTraceLogCallback(&traceLogCallback);
 	InitWindow(720, 720, "Diskiller");
 	InitAudioDevice();
+
+	std::srand(FLAGS_seed);
 
 	auto load_settings = []() -> Settings
 	{
