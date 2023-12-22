@@ -13,3 +13,6 @@
 [submodule "ext/tileson"]
 	path = ext/tileson
 	url = https://github.com/SSBMTonberry/tileson.git
+[submodule "ext/gflags"]
+	path = ext/gflags
+	url = https://github.com/gflags/gflags.git
