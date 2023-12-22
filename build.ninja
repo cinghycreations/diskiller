@@ -48,15 +48,15 @@ build windows: phony temp/build/windows/Release/diskiller.exe
 build linux: phony temp/build/linux/diskiller
 build raspberrypi: phony temp/build/raspberrypi/diskiller
 
-build temp/build/windows/diskiller-0.2-windows.zip: cmake-package temp/build/windows/diskiller.sln
+build temp/build/windows/diskiller-0.2.1-windows.zip: cmake-package temp/build/windows/diskiller.sln
   binarydir = temp/build/windows
 
-build temp/build/linux/diskiller-0.2-linux.tar.gz: wsl-cmake-package temp/build/linux/build.ninja
+build temp/build/linux/diskiller-0.2.1-linux.tar.gz: wsl-cmake-package temp/build/linux/build.ninja
   binarydir = temp/build/linux
 
-build temp/build/raspberrypi/diskiller-0.2-raspberrypi.tar.gz: wsl-cmake-package temp/build/raspberrypi/build.ninja
+build temp/build/raspberrypi/diskiller-0.2.1-raspberrypi.tar.gz: wsl-cmake-package temp/build/raspberrypi/build.ninja
   binarydir = temp/build/raspberrypi
   
-build packages: phony temp/build/windows/diskiller-0.2-windows.zip temp/build/linux/diskiller-0.2-linux.tar.gz temp/build/raspberrypi/diskiller-0.2-raspberrypi.tar.gz
+build packages: phony temp/build/windows/diskiller-0.2.1-windows.zip temp/build/linux/diskiller-0.2.1-linux.tar.gz temp/build/raspberrypi/diskiller-0.2.1-raspberrypi.tar.gz
 
 default executables
