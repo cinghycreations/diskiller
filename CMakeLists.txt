@@ -1,6 +1,6 @@
 cmake_minimum_required( VERSION 3.21 )
 set( CMAKE_CXX_STANDARD 17 )
-project( diskiller VERSION 0.2 )
+project( diskiller VERSION 0.2.1 )
 
 set( BUILD_STATIC_LIBS ON )
 add_subdirectory( ext/raylib EXCLUDE_FROM_ALL )
