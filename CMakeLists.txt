@@ -14,7 +14,7 @@ target_include_directories( tileson INTERFACE "${CMAKE_SOURCE_DIR}/ext/tileson/i
 
 add_executable( diskiller src/main.cpp )
 target_link_libraries( diskiller PUBLIC raylib glm spdlog nlohmann_json tileson gflags::gflags )
-target_compile_definitions( diskiller PUBLIC __VERSION__=${CMAKE_PROJECT_VERSION} )
+target_compile_definitions( diskiller PUBLIC __VERSION__="${CMAKE_PROJECT_VERSION}" )
 target_precompile_headers( diskiller PUBLIC <raylib.h> <glm/glm.hpp> <spdlog/spdlog.h> <nlohmann/json.hpp> <tileson.h> <gflags/gflags.h> )
 
 install( TARGETS diskiller RUNTIME DESTINATION "." )
