@@ -19,3 +19,7 @@ target_precompile_headers( diskiller PUBLIC <raylib.h> <glm/glm.hpp> <spdlog/spd
 install( TARGETS diskiller RUNTIME DESTINATION "." )
 install( DIRECTORY "${CMAKE_SOURCE_DIR}/build/" DESTINATION "." )
 include( CPack )
+
+enable_testing()
+add_test( NAME quit COMMAND diskiller -seed=349843924 -play_automation=../test/quit.txt WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}/build" )
+add_test( NAME play_simple COMMAND diskiller -seed=349843924 -play_automation=../test/play_simple.txt WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}/build" )

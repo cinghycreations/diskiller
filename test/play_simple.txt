@@ -1,0 +1,106 @@
+#
+# Automation events exporter v1.0 - raylib automation events list
+#
+#    c <events_count>
+#    e <frame> <event_type> <param0> <param1> <param2> <param3> // <event_type_name>
+#
+# more info and bugs-report:  github.com/raysan5/raylib
+# feedback and support:       ray[at]raylib.com
+#
+# Copyright (c) 2023-2024 Ramon Santamaria (@raysan5)
+#
+
+c 93
+e 91 2 257 0 0 0 // Event: INPUT_KEY_DOWN
+e 92 2 257 0 0 0 // Event: INPUT_KEY_DOWN
+e 93 2 257 0 0 0 // Event: INPUT_KEY_DOWN
+e 94 1 257 0 0 0 // Event: INPUT_KEY_UP
+e 302 2 32 0 0 0 // Event: INPUT_KEY_DOWN
+e 303 2 32 0 0 0 // Event: INPUT_KEY_DOWN
+e 304 2 32 0 0 0 // Event: INPUT_KEY_DOWN
+e 305 2 32 0 0 0 // Event: INPUT_KEY_DOWN
+e 306 2 32 0 0 0 // Event: INPUT_KEY_DOWN
+e 307 2 32 0 0 0 // Event: INPUT_KEY_DOWN
+e 308 1 32 0 0 0 // Event: INPUT_KEY_UP
+e 473 2 32 0 0 0 // Event: INPUT_KEY_DOWN
+e 474 2 32 0 0 0 // Event: INPUT_KEY_DOWN
+e 475 2 32 0 0 0 // Event: INPUT_KEY_DOWN
+e 476 2 32 0 0 0 // Event: INPUT_KEY_DOWN
+e 477 2 32 0 0 0 // Event: INPUT_KEY_DOWN
+e 478 1 32 0 0 0 // Event: INPUT_KEY_UP
+e 716 2 32 0 0 0 // Event: INPUT_KEY_DOWN
+e 717 2 32 0 0 0 // Event: INPUT_KEY_DOWN
+e 718 2 32 0 0 0 // Event: INPUT_KEY_DOWN
+e 719 2 32 0 0 0 // Event: INPUT_KEY_DOWN
+e 720 2 32 0 0 0 // Event: INPUT_KEY_DOWN
+e 721 2 32 0 0 0 // Event: INPUT_KEY_DOWN
+e 722 2 32 0 0 0 // Event: INPUT_KEY_DOWN
+e 723 2 32 0 0 0 // Event: INPUT_KEY_DOWN
+e 724 1 32 0 0 0 // Event: INPUT_KEY_UP
+e 915 2 32 0 0 0 // Event: INPUT_KEY_DOWN
+e 916 2 32 0 0 0 // Event: INPUT_KEY_DOWN
+e 917 2 32 0 0 0 // Event: INPUT_KEY_DOWN
+e 918 2 32 0 0 0 // Event: INPUT_KEY_DOWN
+e 919 2 32 0 0 0 // Event: INPUT_KEY_DOWN
+e 920 2 32 0 0 0 // Event: INPUT_KEY_DOWN
+e 921 1 32 0 0 0 // Event: INPUT_KEY_UP
+e 1111 2 32 0 0 0 // Event: INPUT_KEY_DOWN
+e 1112 2 32 0 0 0 // Event: INPUT_KEY_DOWN
+e 1113 2 32 0 0 0 // Event: INPUT_KEY_DOWN
+e 1114 2 32 0 0 0 // Event: INPUT_KEY_DOWN
+e 1115 2 32 0 0 0 // Event: INPUT_KEY_DOWN
+e 1116 2 32 0 0 0 // Event: INPUT_KEY_DOWN
+e 1117 1 32 0 0 0 // Event: INPUT_KEY_UP
+e 1337 2 32 0 0 0 // Event: INPUT_KEY_DOWN
+e 1338 2 32 0 0 0 // Event: INPUT_KEY_DOWN
+e 1339 2 32 0 0 0 // Event: INPUT_KEY_DOWN
+e 1340 2 32 0 0 0 // Event: INPUT_KEY_DOWN
+e 1341 2 32 0 0 0 // Event: INPUT_KEY_DOWN
+e 1342 2 32 0 0 0 // Event: INPUT_KEY_DOWN
+e 1343 2 32 0 0 0 // Event: INPUT_KEY_DOWN
+e 1344 1 32 0 0 0 // Event: INPUT_KEY_UP
+e 1508 2 32 0 0 0 // Event: INPUT_KEY_DOWN
+e 1509 2 32 0 0 0 // Event: INPUT_KEY_DOWN
+e 1510 2 32 0 0 0 // Event: INPUT_KEY_DOWN
+e 1511 2 32 0 0 0 // Event: INPUT_KEY_DOWN
+e 1512 2 32 0 0 0 // Event: INPUT_KEY_DOWN
+e 1513 2 32 0 0 0 // Event: INPUT_KEY_DOWN
+e 1514 2 32 0 0 0 // Event: INPUT_KEY_DOWN
+e 1515 2 32 0 0 0 // Event: INPUT_KEY_DOWN
+e 1516 1 32 0 0 0 // Event: INPUT_KEY_UP
+e 1730 2 32 0 0 0 // Event: INPUT_KEY_DOWN
+e 1731 2 32 0 0 0 // Event: INPUT_KEY_DOWN
+e 1732 2 32 0 0 0 // Event: INPUT_KEY_DOWN
+e 1733 2 32 0 0 0 // Event: INPUT_KEY_DOWN
+e 1734 2 32 0 0 0 // Event: INPUT_KEY_DOWN
+e 1735 2 32 0 0 0 // Event: INPUT_KEY_DOWN
+e 1736 2 32 0 0 0 // Event: INPUT_KEY_DOWN
+e 1737 2 32 0 0 0 // Event: INPUT_KEY_DOWN
+e 1738 1 32 0 0 0 // Event: INPUT_KEY_UP
+e 1992 2 32 0 0 0 // Event: INPUT_KEY_DOWN
+e 1993 2 32 0 0 0 // Event: INPUT_KEY_DOWN
+e 1994 2 32 0 0 0 // Event: INPUT_KEY_DOWN
+e 1995 2 32 0 0 0 // Event: INPUT_KEY_DOWN
+e 1996 2 32 0 0 0 // Event: INPUT_KEY_DOWN
+e 1997 2 32 0 0 0 // Event: INPUT_KEY_DOWN
+e 1998 1 32 0 0 0 // Event: INPUT_KEY_UP
+e 2167 2 32 0 0 0 // Event: INPUT_KEY_DOWN
+e 2168 2 32 0 0 0 // Event: INPUT_KEY_DOWN
+e 2169 2 32 0 0 0 // Event: INPUT_KEY_DOWN
+e 2170 2 32 0 0 0 // Event: INPUT_KEY_DOWN
+e 2171 2 32 0 0 0 // Event: INPUT_KEY_DOWN
+e 2172 2 32 0 0 0 // Event: INPUT_KEY_DOWN
+e 2173 2 32 0 0 0 // Event: INPUT_KEY_DOWN
+e 2174 2 32 0 0 0 // Event: INPUT_KEY_DOWN
+e 2175 1 32 0 0 0 // Event: INPUT_KEY_UP
+e 2296 2 264 0 0 0 // Event: INPUT_KEY_DOWN
+e 2297 2 264 0 0 0 // Event: INPUT_KEY_DOWN
+e 2298 1 264 0 0 0 // Event: INPUT_KEY_UP
+e 2309 2 264 0 0 0 // Event: INPUT_KEY_DOWN
+e 2310 2 264 0 0 0 // Event: INPUT_KEY_DOWN
+e 2311 1 264 0 0 0 // Event: INPUT_KEY_UP
+e 2323 2 264 0 0 0 // Event: INPUT_KEY_DOWN
+e 2324 2 264 0 0 0 // Event: INPUT_KEY_DOWN
+e 2325 2 264 0 0 0 // Event: INPUT_KEY_DOWN
+e 2326 1 264 0 0 0 // Event: INPUT_KEY_UP
+e 2361 2 257 0 0 0 // Event: INPUT_KEY_DOWN
