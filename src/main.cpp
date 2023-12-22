@@ -8,7 +8,9 @@
 #include <list>
 #include <gflags/gflags.h>
 
-DEFINE_uint32(seed, 1, "Set random seed");
+DEFINE_uint32(seed, 0, "Set random seed");
+DEFINE_string(record_automation, "", "Record and save an automation list");
+DEFINE_string(play_automation, "", "Play an automation list");
 
 std::shared_ptr<spdlog::sinks::sink> consoleSink;
 std::shared_ptr<spdlog::sinks::sink> fileSink;
@@ -663,7 +665,7 @@ std::optional<GameScreen*> SplashScreen::update() {
 				break;
 
 			case 3:
-				exit(0);
+				return nullptr;
 
 			default:
 				break;
@@ -716,6 +718,57 @@ static void traceLogCallback(int logLevel, const char* text, va_list args) {
 	}
 }
 
+class Automation {
+public:
+	Automation(const std::filesystem::path& recording_path, const std::filesystem::path& playing_path) : recordingPath(recording_path), playingPath(playing_path) {
+		memset(&automation, 0, sizeof(AutomationEventList));
+
+		if (!recordingPath.empty()) {
+			gameSkeletonLog->info("Starting to record automation");
+			automation = LoadAutomationEventList(nullptr);
+			SetAutomationEventList(&automation);
+			StartAutomationEventRecording();
+			SetAutomationEventBaseFrame(0);
+		}
+		else if (!playingPath.empty()) {
+			gameSkeletonLog->info("Starting to play automation from file {}", playingPath);
+			automation = LoadAutomationEventList(playingPath.string().c_str());
+			SetAutomationEventBaseFrame(0);
+		}
+	}
+
+	~Automation() {
+		if (!recordingPath.empty()) {
+			gameSkeletonLog->info("Saving recorded automation to file {}", recordingPath);
+			StopAutomationEventRecording();
+			ExportAutomationEventList(automation, recordingPath.string().c_str());
+		}
+
+		UnloadAutomationEventList(&automation);
+		memset(&automation, 0, sizeof(AutomationEventList));
+	}
+
+	void beginFrame() {
+		if (!playingPath.empty()) {
+			while (automation_event < automation.count && automation_frame >= automation.events[automation_event].frame) {
+				PlayAutomationEvent(automation.events[automation_event]);
+				++automation_event;
+			}
+		}
+	}
+
+	void endFrame() {
+		++automation_frame;
+	}
+
+private:
+	AutomationEventList automation;
+	const std::filesystem::path recordingPath;
+	const std::filesystem::path playingPath;
+	int automation_event = 0;
+	int automation_frame = 0;
+};
+
 int main(int argc, char* argv[]) {
 	gflags::ParseCommandLineFlags(&argc, &argv, false);
 
@@ -736,10 +789,12 @@ int main(int argc, char* argv[]) {
 
 	SetConfigFlags(FLAG_WINDOW_RESIZABLE);
 	SetTraceLogCallback(&traceLogCallback);
+	SetTargetFPS(60);
 	InitWindow(720, 720, "Diskiller");
 	InitAudioDevice();
 
-	std::srand(FLAGS_seed);
+	std::srand(FLAGS_seed != 0 ? FLAGS_seed : std::time(nullptr));
+	Automation automation(FLAGS_record_automation, FLAGS_play_automation);
 
 	auto load_settings = []() -> Settings
 	{
@@ -763,6 +818,8 @@ int main(int argc, char* argv[]) {
 	game_screen.reset(new SplashScreen(settings, content));
 
 	while (!WindowShouldClose()) {
+		automation.beginFrame();
+
 		if (IsKeyPressed(KEY_F5)) {
 			settings = load_settings();
 		}
@@ -772,11 +829,18 @@ int main(int argc, char* argv[]) {
 		BeginDrawing();
 		game_screen->render();
 		EndDrawing();
+		automation.endFrame();
 
 		if (new_screen.has_value()) {
-			gameSkeletonLog->info("New game screen detected");
-			game_screen.reset();
-			game_screen.reset(*new_screen);
+			if (new_screen == nullptr) {
+				gameSkeletonLog->info("Quit detected");
+				break;
+			}
+			else {
+				gameSkeletonLog->info("New game screen detected");
+				game_screen.reset();
+				game_screen.reset(*new_screen);
+			}
 		}
 	}
 
