@@ -381,7 +381,7 @@ public:
 			}
 		}
 
-		bool projectile = shootFrames > 0;
+		const bool projectile = shootFrames > 0;
 		--shootFrames;
 
 		{
@@ -407,8 +407,6 @@ public:
 
 				if (hit) {
 					logicLog->info("Disk hit");
-
-					projectile = false;
 
 					Explosion explosion;
 					explosion.position = iter->position;
@@ -438,9 +436,11 @@ public:
 
 			if (prev_disk_count > 0 && disks.empty()) {
 				if (missedDisks > 0) {
+					logicLog->info("Turn finished with {} hit and {} missed disks, considered failed", hitDisks, missedDisks);
 					++failedTurns;
 				}
 				else {
+					logicLog->info("Turn finished with {} hit and {} missed disks, considered successful", hitDisks, missedDisks);
 					++successfulTurns;
 				}
 				lastDiskRemovedTime = GetTime();
@@ -841,7 +841,6 @@ int main(int argc, char* argv[]) {
 	gameSkeletonLog.reset(new spdlog::logger("gameSkeleton", sinks.begin(), sinks.end()));
 
 	raylibLog->set_level(spdlog::level::warn);
-	logicLog->set_level(spdlog::level::debug);
 
 	SetConfigFlags(FLAG_WINDOW_RESIZABLE);
 	SetTraceLogCallback(&traceLogCallback);
