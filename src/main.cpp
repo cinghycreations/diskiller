@@ -716,7 +716,9 @@ static void traceLogCallback(int logLevel, const char* text, va_list args) {
 	}
 }
 
-int main() {
+int main(int argc, char* argv[]) {
+	gflags::ParseCommandLineFlags(&argc, &argv, false);
+
 	const std::filesystem::path save_folder = Platform::getSaveFolder();
 	if (!std::filesystem::exists(save_folder)) {
 		std::filesystem::create_directories(save_folder);
