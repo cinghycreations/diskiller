@@ -23,7 +23,7 @@ rule wsl-cmake-package
   pool = console
 
 rule upload
-  command = butler push $in cinghycreations/diskiller:$platform --userversion 0.2.2
+  command = butler push $in cinghycreations/diskiller:$platform --userversion 0.3
   pool = console
 
 build temp/build/windows/diskiller.sln: cmake-gen
@@ -52,24 +52,24 @@ build windows: phony temp/build/windows/Release/diskiller.exe
 build linux: phony temp/build/linux/diskiller
 build raspberrypi: phony temp/build/raspberrypi/diskiller
 
-build temp/build/windows/diskiller-0.2.2-windows.zip: cmake-package temp/build/windows/diskiller.sln
+build temp/build/windows/diskiller-0.3-windows.zip: cmake-package temp/build/windows/diskiller.sln
   binarydir = temp/build/windows
 
-build temp/build/linux/diskiller-0.2.2-linux.zip: wsl-cmake-package temp/build/linux/build.ninja
+build temp/build/linux/diskiller-0.3-linux.zip: wsl-cmake-package temp/build/linux/build.ninja
   binarydir = temp/build/linux
 
-build temp/build/raspberrypi/diskiller-0.2.2-raspberrypi.zip: wsl-cmake-package temp/build/raspberrypi/build.ninja
+build temp/build/raspberrypi/diskiller-0.3-raspberrypi.zip: wsl-cmake-package temp/build/raspberrypi/build.ninja
   binarydir = temp/build/raspberrypi
   
-build packages: phony temp/build/windows/diskiller-0.2.2-windows.zip temp/build/linux/diskiller-0.2.2-linux.zip temp/build/raspberrypi/diskiller-0.2.2-raspberrypi.zip
+build packages: phony temp/build/windows/diskiller-0.3-windows.zip temp/build/linux/diskiller-0.3-linux.zip temp/build/raspberrypi/diskiller-0.3-raspberrypi.zip
 
-build upload_windows: upload temp/build/windows/diskiller-0.2.2-windows.zip
+build upload_windows: upload temp/build/windows/diskiller-0.3-windows.zip
   platform = windows
 
-build upload_linux: upload temp/build/linux/diskiller-0.2.2-linux.zip
+build upload_linux: upload temp/build/linux/diskiller-0.3-linux.zip
   platform = linux
 
-build upload_raspberrypi: upload temp/build/raspberrypi/diskiller-0.2.2-raspberrypi.zip
+build upload_raspberrypi: upload temp/build/raspberrypi/diskiller-0.3-raspberrypi.zip
   platform = raspberrypi
 
 build upload: phony upload_windows upload_linux upload_raspberrypi
