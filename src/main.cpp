@@ -684,27 +684,30 @@ std::optional<GameScreen*> SplashScreen::update() {
 			menuSelection = std::clamp(menuSelection - 1, 0, 3);
 		}
 
-		if (IsKeyPressed(KEY_ENTER) || IsGamepadButtonPressed(0, Platform::GAMEPAD_X)) {
-			switch (menuSelection)
-			{
-			case 0:
+		if (menuSelection == 0) {
+			if (IsKeyPressed(KEY_ENTER) || IsGamepadButtonPressed(0, Platform::GAMEPAD_X)) {
 				savegame.lastSelectedGameMode = gameModes.at(modeSelection).gameModeName;
 				saveSavegame();
 				return new Session(settings, content, gameModes.at(modeSelection));
-
-			case 1:
+			}
+		}
+		else if (menuSelection == 1) {
+			if (IsKeyPressed(KEY_RIGHT) || IsKeyPressed(KEY_ENTER) || IsGamepadButtonPressed(0, Platform::GAMEPAD_X)) {
 				modeSelection = (modeSelection + 1) % gameModes.size();
-				break;
+			}
 
-			case 2:
+			if (IsKeyPressed(KEY_LEFT)) {
+				modeSelection = (modeSelection - 1 + gameModes.size()) % gameModes.size();
+			}
+		}
+		else if (menuSelection == 2) {
+			if (IsKeyPressed(KEY_ENTER) || IsGamepadButtonPressed(0, Platform::GAMEPAD_X)) {
 				subscreen = Subscreen::Records;
-				break;
-
-			case 3:
+			}
+		}
+		else if (menuSelection == 3) {
+			if (IsKeyPressed(KEY_ENTER) || IsGamepadButtonPressed(0, Platform::GAMEPAD_X)) {
 				return nullptr;
-
-			default:
-				break;
 			}
 		}
 	}
