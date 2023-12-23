@@ -73,6 +73,7 @@ struct Savegame {
 		int score;
 	};
 
+	std::string lastSelectedGameMode;
 	std::vector<BestScore> scores;
 };
 
@@ -94,6 +95,9 @@ void from_json(const nlohmann::json& json, Savegame::BestScore& best_score) {
 }
 
 void from_json(const nlohmann::json& json, Savegame& savegame) {
+	if (json.contains("lastSelectedGameMode")) {
+		json.at("lastSelectedGameMode").get_to(savegame.lastSelectedGameMode);
+	}
 	json.at("scores").get_to(savegame.scores);
 }
 
@@ -103,6 +107,7 @@ void to_json(nlohmann::json& json, const Savegame::BestScore& best_score) {
 }
 
 void to_json(nlohmann::json& json, const Savegame& savegame) {
+	json["lastSelectedGameMode"] = savegame.lastSelectedGameMode;
 	json["scores"] = savegame.scores;
 }
 
@@ -197,29 +202,35 @@ public:
 	SplashScreen(const Settings& _settings, Content& _content) : settings(_settings), content(_content) {
 		gameSkeletonLog->info("Created SplashScreen");
 
-		{
-			const std::filesystem::path savefile = Platform::getSaveFolder() / "savegame.json";
+		loadSavegame();
 
-			logicLog->info("Checking savegame file {}", savefile);
-			if (!std::filesystem::exists(savefile)) {
-				logicLog->warn("Savegame doesn't exist");
-			}
-			else {
-				logicLog->info("Reading savegame");
-
-				std::ifstream stream(savefile);
-				nlohmann::json json;
-				stream >> json;
-				savegame = json;
+		for (int i = 0; i < gameModes.size(); ++i) {
+			if (gameModes.at(i).gameModeName == savegame.lastSelectedGameMode) {
+				modeSelection = i;
+				break;
 			}
 		}
-
 		PlayMusicStream(content.menuMusic);
 	}
 
-	SplashScreen(const Settings& _settings, Content& _content, const int your_score) : SplashScreen(_settings, _content) {
+	SplashScreen(const Settings& _settings, Content& _content, const std::string& game_mode, const int your_score) : settings(_settings), content(_content) {
+		gameSkeletonLog->info("Created SplashScreen from session end");
+
+		loadSavegame();
+
 		yourScore = your_score;
 		subscreen = Subscreen::YourScore;
+		if (updateBestScore(game_mode, your_score)) {
+			saveSavegame();
+		}
+
+		for (int i = 0; i < gameModes.size(); ++i) {
+			if (gameModes.at(i).gameModeName == savegame.lastSelectedGameMode) {
+				modeSelection = i;
+				break;
+			}
+		}
+		PlayMusicStream(content.menuMusic);
 	}
 
 	~SplashScreen() {
@@ -287,6 +298,67 @@ private:
 	SessionDef { "Expert Best of 100", SessionType::BestScore, 100, 3 },
 	SessionDef { "Expert Survival", SessionType::Survival, 0, 3 },
 	};
+
+	void loadSavegame()
+	{
+		const std::filesystem::path savefile = Platform::getSaveFolder() / "savegame.json";
+		logicLog->info("Loading savegame from file {}", savefile);
+
+		if (!std::filesystem::exists(savefile)) {
+			logicLog->warn("Savegame doesn't exist");
+		}
+		else {
+			logicLog->info("Savegame exists, reading");
+
+			std::ifstream stream(savefile);
+			nlohmann::json json;
+			stream >> json;
+			savegame = json;
+		}
+	}
+
+	void saveSavegame() {
+		const std::filesystem::path savefile = Platform::getSaveFolder() / "savegame.json";
+		logicLog->info("Saving savegame");
+
+		std::ofstream stream(savefile);
+		nlohmann::json json = savegame;
+		stream << json;
+	}
+
+	bool updateBestScore(const std::string& mode, const int score) {
+		bool present = false;
+		for (auto& best_score : savegame.scores) {
+			if (mode == best_score.mode) {
+				present = true;
+
+				if (score > best_score.score) {
+					logicLog->info("Updating best score for mode {}", mode);
+					best_score.score = score;
+					return true;
+				}
+				else {
+					logicLog->info("Existing score for mode {} is better", mode);
+					return false;
+				}
+
+				break;
+			}
+		}
+
+		if (!present) {
+			logicLog->info("Best score not present for mode {}, adding", mode);
+
+			Savegame::BestScore best_score;
+			best_score.mode = mode;
+			best_score.score = score;
+			savegame.scores.push_back(best_score);
+
+			return true;
+		}
+
+		return false;
+	}
 };
 
 class Session : public GameScreen {
@@ -322,13 +394,11 @@ public:
 
 			if (sessionDef.type == SessionType::BestScore && currentTurn == sessionDef.turnCount) {
 				logicLog->info("Finished session with best score {}", successfulTurns);
-				saveBestScore(sessionDef.gameModeName, successfulTurns);
-				return new SplashScreen(settings, content, successfulTurns);
+				return new SplashScreen(settings, content, sessionDef.gameModeName, successfulTurns);
 			}
 			else if (sessionDef.type == SessionType::Survival && failedTurns > 0) {
 				logicLog->info("Finished session with best score {}", successfulTurns);
-				saveBestScore(sessionDef.gameModeName, successfulTurns);
-				return new SplashScreen(settings, content, successfulTurns);
+				return new SplashScreen(settings, content, sessionDef.gameModeName, successfulTurns);
 			}
 			else {
 				logicLog->info("Creating disks for turn {}", currentTurn + 1);
@@ -602,64 +672,6 @@ private:
 
 		return result;
 	}
-
-	static void saveBestScore(const std::string& mode, const int score) {
-		Savegame savegame;
-
-		const std::filesystem::path savefile = Platform::getSaveFolder() / "savegame.json";
-
-		logicLog->info("Saving best score to {}", savefile);
-
-		if (!std::filesystem::exists(savefile)) {
-			logicLog->warn("Savegame doesn't exist, creating");
-
-			std::ofstream stream(savefile);
-			nlohmann::json json = savegame;
-			stream << json;
-		}
-		else {
-			logicLog->info("Reading existing savegame");
-
-			std::ifstream stream(savefile);
-			nlohmann::json json;
-			stream >> json;
-			savegame = json;
-		}
-
-		bool present = false;
-		for (auto& best_score : savegame.scores) {
-			if (mode == best_score.mode) {
-				present = true;
-
-				if (score > best_score.score) {
-					logicLog->info("Updating best score for mode {}", mode);
-					best_score.score = score;
-				}
-				else {
-					logicLog->info("Existing score for mode {} is better", mode);
-				}
-
-				break;
-			}
-		}
-
-		if (!present) {
-			logicLog->info("Best score not present for mode {}, adding", mode);
-
-			Savegame::BestScore best_score;
-			best_score.mode = mode;
-			best_score.score = score;
-			savegame.scores.push_back(best_score);
-		}
-
-		{
-			logicLog->info("Saving savegame");
-
-			std::ofstream stream(savefile);
-			nlohmann::json json = savegame;
-			stream << json;
-		}
-	}
 };
 
 std::optional<GameScreen*> SplashScreen::update() {
@@ -676,6 +688,8 @@ std::optional<GameScreen*> SplashScreen::update() {
 			switch (menuSelection)
 			{
 			case 0:
+				savegame.lastSelectedGameMode = gameModes.at(modeSelection).gameModeName;
+				saveSavegame();
 				return new Session(settings, content, gameModes.at(modeSelection));
 
 			case 1:
