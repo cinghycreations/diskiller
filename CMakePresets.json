@@ -1,0 +1,138 @@
+{
+  "version": 6,
+  "cmakeMinimumRequired": {
+    "major": 3,
+    "minor": 23,
+    "patch": 0
+  },
+  "configurePresets": [
+    {
+      "name": "windows",
+      "displayName": "Windows",
+      "binaryDir": "${sourceDir}/temp/build/windows",
+      "cacheVariables": {
+        "CPACK_GENERATOR": "ZIP",
+        "CPACK_SYSTEM_NAME": "windows"
+      }
+    },
+    {
+      "name": "linux",
+      "displayName": "Linux",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/temp/build/linux",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "CPACK_GENERATOR": "ZIP",
+        "CPACK_SYSTEM_NAME": "linux"
+      }
+    },
+    {
+      "name": "raspberrypi32",
+      "displayName": "Raspberry PI 32-bit",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/temp/build/raspberrypi32",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "CMAKE_C_COMPILER": "arm-linux-gnueabihf-gcc",
+        "CMAKE_CXX_COMPILER": "arm-linux-gnueabihf-g++",
+        "CPACK_GENERATOR": "ZIP",
+        "CPACK_SYSTEM_NAME": "raspberrypi32",
+        "PLATFORM": "DRM"
+      }
+    },
+    {
+      "name": "raspberrypi64",
+      "displayName": "Raspberry PI 64-bit",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/temp/build/raspberrypi64",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "CMAKE_C_COMPILER": "aarch64-linux-gnu-gcc",
+        "CMAKE_CXX_COMPILER": "aarch64-linux-gnu-g++",
+        "CPACK_GENERATOR": "ZIP",
+        "CPACK_SYSTEM_NAME": "raspberrypi64",
+        "PLATFORM": "DRM"
+      }
+    },
+    {
+      "name": "android32",
+      "displayName": "Android 32-bit",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/temp/build/android32",
+      "toolchainFile": "C:/Qt/6.6.3/android_armv7/lib/cmake/Qt6/qt.toolchain.cmake",
+      "cacheVariables": {
+        "ANDROID_NDK_ROOT": "C:/Android/SDK/ndk/25.1.8937393",
+        "ANDROID_SDK_ROOT": "C:/Android/SDK",
+        "CMAKE_C_FLAGS": "-DSTBIR_NO_SIMD",
+        "CMAKE_CXX_FLAGS": "-DCMAKE_CXX_FLAGS",
+        "CMAKE_MAKE_PROGRAM": "${sourceDir}/temp/ninja.exe",
+        "PLATFORM": "Android"
+      },
+      "environment": {
+        "JAVA_HOME": "C:/Android/jdk-17.0.11+9"
+      }
+    },
+    {
+      "name": "android64",
+      "displayName": "Android 64-bit",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/temp/build/android64",
+      "toolchainFile": "C:/Qt/6.6.3/android_arm64_v8a/lib/cmake/Qt6/qt.toolchain.cmake",
+      "cacheVariables": {
+        "ANDROID_SDK_ROOT": "C:/Android/SDK",
+        "ANDROID_NDK_ROOT": "C:/Android/SDK/ndk/25.1.8937393",
+        "CMAKE_MAKE_PROGRAM": "${sourceDir}/temp/ninja.exe",
+        "PLATFORM": "Android"
+      },
+      "environment": {
+        "JAVA_HOME": "C:/Android/jdk-17.0.11+9"
+      }
+    },
+    {
+      "name": "web",
+      "displayName": "Web",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/temp/build/web",
+      "toolchainFile": "C:/emsdk/upstream/emscripten/cmake/Modules/Platform/Emscripten.cmake",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "CMAKE_C_FLAGS": "-s ASYNCIFY",
+        "CMAKE_EXE_LINKER_FLAGS": "-s USE_GLFW=3 -s ASYNCIFY -s TOTAL_MEMORY=67108864 --preload-file ${sourceDir}/build@/ --shell-file C:/emsdk/upstream/emscripten/src/shell_minimal.html",
+        "CMAKE_MAKE_PROGRAM": "${sourceDir}/temp/ninja.exe",
+        "CMAKE_EXECUTABLE_SUFFIX_CXX": ".html",
+        "PLATFORM": "Web"
+      }
+    }
+  ],
+  "buildPresets": [
+    {
+      "name": "windows",
+      "configurePreset": "windows",
+      "configuration": "Release"
+    },
+    {
+      "name": "linux",
+      "configurePreset": "linux"
+    },
+    {
+      "name": "raspberrypi32",
+      "configurePreset": "raspberrypi32"
+    },
+    {
+      "name": "raspberrypi64",
+      "configurePreset": "raspberrypi64"
+    },
+    {
+      "name": "android32",
+      "configurePreset": "android32"
+    },
+    {
+      "name": "android64",
+      "configurePreset": "android64"
+    },
+    {
+      "name": "web",
+      "configurePreset": "web"
+    }
+  ]
+}

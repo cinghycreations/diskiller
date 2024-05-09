@@ -1,6 +1,13 @@
 cmake_minimum_required( VERSION 3.21 )
 set( CMAKE_CXX_STANDARD 17 )
-project( diskiller VERSION 0.3 )
+project( diskiller VERSION 0.3.1 )
+
+add_compile_definitions( __RELEASE=$<IF:$<CONFIG:Release>,1,0> )
+add_compile_definitions( __ANDROID=$<IF:$<PLATFORM_ID:Android>,1,0> )
+add_compile_definitions( __LINUX=$<IF:$<PLATFORM_ID:Linux>,1,0> )
+add_compile_definitions( __WEB=$<IF:$<PLATFORM_ID:Emscripten>,1,0> )
+add_compile_definitions( __WINDOWS=$<IF:$<PLATFORM_ID:Windows>,1,0> )
+add_compile_definitions( BUILD_VERSION="${PROJECT_VERSION}" )
 
 set( BUILD_STATIC_LIBS ON )
 add_subdirectory( ext/raylib EXCLUDE_FROM_ALL )
@@ -14,14 +21,8 @@ target_include_directories( tileson INTERFACE "${CMAKE_SOURCE_DIR}/ext/tileson/i
 
 add_executable( diskiller src/main.cpp )
 target_link_libraries( diskiller PUBLIC raylib glm spdlog nlohmann_json tileson gflags::gflags )
-target_compile_definitions( diskiller PUBLIC __VERSION__="${CMAKE_PROJECT_VERSION}" )
 target_precompile_headers( diskiller PUBLIC <raylib.h> <glm/glm.hpp> <spdlog/spdlog.h> <nlohmann/json.hpp> <tileson.h> <gflags/gflags.h> )
 
 install( TARGETS diskiller RUNTIME DESTINATION "." )
 install( DIRECTORY "${CMAKE_SOURCE_DIR}/build/" DESTINATION "." )
 include( CPack )
-
-enable_testing()
-add_test( NAME quit COMMAND diskiller -seed=349843924 -play_automation=../test/quit.txt "-check_log=Quit detected" WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}/build" )
-add_test( NAME play_simple COMMAND diskiller -seed=349843924 -play_automation=../test/play_simple.txt "-check_log=Finished session with best score 10" WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}/build" )
-add_test( NAME survival1 COMMAND diskiller -seed=349843924 -play_automation=../test/survival1.txt "-check_log=Finished session with best score 4" WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}/build" )

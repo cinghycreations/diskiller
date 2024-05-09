@@ -251,7 +251,7 @@ public:
 			DrawTextEx(content.font, "Records", Vector2{ 3,10 }, 1, 0, BLACK);
 			DrawTextEx(content.font, "Exit", Vector2{ 3,11 }, 1, 0, BLACK);
 			DrawTextEx(content.font, ">", Vector2{ 2, float(8 + menuSelection) }, 1, 0, BLACK);
-			DrawTextEx(content.font, fmt::format("v{} {}", __VERSION__, __DATE__).c_str(), Vector2{ 0, 15.5f }, 0.5, 0, BLACK);
+			DrawTextEx(content.font, fmt::format("v{} {}", BUILD_VERSION, __DATE__).c_str(), Vector2{ 0, 15.5f }, 0.5, 0, BLACK);
 		}
 		else if (subscreen == Subscreen::Records) {
 			for (int i = 0; i < gameModes.size(); ++i) {
